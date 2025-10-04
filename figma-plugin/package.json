@@ -1,0 +1,16 @@
+{
+  "name": "figma2bf-hello-world",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "watch": "tsc -w -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.101.0",
+    "typescript": "^5.4.0"
+  }
+}
+
+
