@@ -36,6 +36,50 @@
     .tabpane-footer { flex-shrink: 0; }
     .empty-state { display: flex; align-items: center; justify-content: center; min-height: 200px; color: #9ca3af; font-size: 13px; }
     #preview { background: #f5f5f5; border-radius: 4px; padding: 16px; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+    
+    /* JSON tab with copy button */
+    .json-container { position: relative; width: 100%; height: 100%; }
+    .copy-btn { position: absolute; top: 8px; right: 8px; padding: 4px 8px; font-size: 11px; z-index: 10; }
+    .copy-btn.copied { background: #10b981; color: white; border-color: #10b981; }
+    
+    /* Animated checkmark */
+    .copy-check {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 32px;
+      height: 32px;
+      background: #10b981;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 18px;
+      font-weight: bold;
+      pointer-events: none;
+      animation: checkPop 0.6s ease-out forwards;
+      z-index: 20;
+    }
+    
+    @keyframes checkPop {
+      0% {
+        transform: scale(0.5);
+        opacity: 0;
+      }
+      50% {
+        transform: scale(1.2);
+        opacity: 1;
+      }
+      70% {
+        transform: scale(1);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(1) translateY(-20px);
+        opacity: 0;
+      }
+    }
   </style>
   <script>
     let state = { apiKey: '', activeTab: 'preview', selectionData: null, sending: false }
@@ -130,7 +174,8 @@
       if (!btn) return
       const hasSelection = state.selectionData && state.selectionData.length > 0
       btn.disabled = state.sending || !hasSelection
-      btn.textContent = state.sending ? 'Sending...' : 'Send to BetterForms'
+      const sendIcon = '<svg style="width:14px;height:14px;margin-right:6px;display:inline-block;vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>'
+      btn.innerHTML = state.sending ? 'Sending...' : sendIcon + 'Send to BetterForms'
     }
 
     function showFeedback(message, type) {
@@ -146,6 +191,52 @@
       if (fb) fb.style.display = 'none'
     }
 
+    function copyJsonToClipboard() {
+      if (!state.selectionData || state.selectionData.length === 0) return
+      const jsonString = JSON.stringify(state.selectionData, null, 2)
+      
+      // Use textarea fallback for Figma plugin environment
+      const textarea = document.createElement('textarea')
+      textarea.value = jsonString
+      textarea.style.position = 'fixed'
+      textarea.style.opacity = '0'
+      document.body.appendChild(textarea)
+      textarea.select()
+      
+      try {
+        document.execCommand('copy')
+        const btn = document.getElementById('copyBtn')
+        const jsonEl = document.getElementById('json')
+        
+        // Show animated checkmark
+        if (jsonEl) {
+          const check = document.createElement('div')
+          check.className = 'copy-check'
+          check.textContent = '✓'
+          jsonEl.appendChild(check)
+          
+          // Remove after animation completes
+          setTimeout(() => {
+            check.remove()
+          }, 600)
+        }
+        
+        // Update button temporarily
+        if (btn) {
+          btn.classList.add('copied')
+          btn.textContent = '✓ Copied!'
+          setTimeout(() => {
+            btn.classList.remove('copied')
+            btn.textContent = 'Copy JSON'
+          }, 2000)
+        }
+      } catch (err) {
+        console.error('Failed to copy:', err)
+      } finally {
+        document.body.removeChild(textarea)
+      }
+    }
+
     function renderSelection(selection) {
       const meta = document.getElementById('selMeta')
       const jsonEl = document.getElementById('json')
@@ -153,7 +244,9 @@
       clearFeedback()
       if (!Array.isArray(selection) || selection.length === 0) {
         if (meta) meta.textContent = 'No selection'
-        if (jsonEl) jsonEl.textContent = ''
+        if (jsonEl) {
+          jsonEl.innerHTML = '<div class="empty-state">Select a layer or object to view JSON data</div>'
+        }
         if (previewEl) {
           previewEl.innerHTML = '<div class="empty-state">Select a layer or object to preview</div>'
         }
@@ -162,11 +255,32 @@
       }
       const first = selection[0]
       if (meta) meta.textContent = `${selection.length} node(s): ${first.name} (${first.type})`
-      // Render a collapsible JSON tree (simple)
+      // Render JSON with copy button
       try {
         jsonEl.innerHTML = ''
+        jsonEl.style.position = 'relative'
+        
+        // Copy button
+        const copyBtn = document.createElement('button')
+        copyBtn.id = 'copyBtn'
+        copyBtn.className = 'copy-btn'
+        copyBtn.textContent = 'Copy JSON'
+        copyBtn.onclick = copyJsonToClipboard
+        
+        // JSON pre element
         const pre = document.createElement('pre')
         pre.textContent = JSON.stringify(selection, null, 2)
+        pre.style.fontFamily = 'ui-monospace, SFMono-Regular, Menlo, monospace'
+        pre.style.fontSize = '11px'
+        pre.style.background = '#f9fafb'
+        pre.style.border = '1px solid #e5e7eb'
+        pre.style.borderRadius = '4px'
+        pre.style.padding = '8px'
+        pre.style.paddingTop = '32px'
+        pre.style.margin = '0'
+        pre.style.overflowX = 'auto'
+        
+        jsonEl.appendChild(copyBtn)
         jsonEl.appendChild(pre)
         if (previewEl) {
           previewEl.innerHTML = ''
@@ -216,10 +330,7 @@
   </script>
 </head>
 <body>
-  <div class="header">
-    <strong>BetterForms Figma Bridge</strong>
-    <div class="spacer"></div>
-  </div>
+
   <div class="section" id="devSection">
     <div class="tabs">
       <button class="tab active" data-tab="preview" onclick="setActiveTab('preview')">Preview</button>
@@ -238,7 +349,7 @@
       </div>
       <div class="tabpane" data-tab="json">
         <div class="tabpane-content">
-          <div id="json" style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:11px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:4px; padding:8px;"></div>
+          <div id="json" style="width: 100%; height: 100%;"></div>
         </div>
       </div>
       <div class="tabpane" data-tab="account">
