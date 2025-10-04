@@ -29,7 +29,7 @@ Since this plugin is not yet published to the Figma Community, you'll need to in
 
 ```bash
 git clone https://github.com/DelfsEngineering/betterforms-figma-bridge.git
-cd betterforms-figma-bridge/figma-plugin
+cd betterforms-figma-bridge
 ```
 
 ### Step 2: Install Dependencies
@@ -59,8 +59,7 @@ This compiles the TypeScript source code (`src/code.ts`) into JavaScript (`dist/
    - Navigate to: `Plugins` → `Development` → `Import plugin from manifest...`
 
 4. **Select the manifest file:**
-   - Browse to the cloned repository
-   - Navigate to: `betterforms-figma-bridge/figma-plugin/`
+   - Browse to the cloned repository folder: `betterforms-figma-bridge/`
    - Select the `manifest.json` file
    - Click **Open**
 
@@ -116,9 +115,11 @@ After making code changes and rebuilding:
 ### Project Structure
 
 ```
-figma-plugin/
+betterforms-figma-bridge/
 ├── manifest.json       # Plugin configuration
 ├── ui.html            # Plugin UI interface
+├── package.json       # Node dependencies
+├── tsconfig.json      # TypeScript configuration
 ├── src/
 │   └── code.ts        # Main plugin logic (TypeScript)
 ├── dist/
@@ -178,7 +179,7 @@ figma-plugin/
 
 - [Figma Plugin API Documentation](https://www.figma.com/plugin-docs/)
 - [BetterForms Documentation](https://docs.fmbetterforms.com/)
-- [Full Plugin Specification](./figma-plugin/docs/spec.md)
+- [Full Plugin Specification](./docs/spec.md)
 
 ## 🤝 Contributing
 
