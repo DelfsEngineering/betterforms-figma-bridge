@@ -25,7 +25,7 @@ This plugin bridges Figma designs with FileMaker BetterForms, enabling automated
 
 Before installing this plugin, ensure you have:
 
-- **Figma Desktop App** (recommended) or Figma in a supported browser
+ - **Figma Desktop App** (required for development; dev plugin import/reload is not supported in the browser)
 - **Node.js** (v16 or later) and **npm** installed on your machine
 - A Figma account
 
@@ -58,7 +58,7 @@ This compiles the TypeScript source code (`src/code.ts`) into JavaScript (`dist/
 
 ### Step 4: Load the Plugin in Figma
 
-1. **Open Figma Desktop App** (or Figma in browser)
+ 1. **Open Figma Desktop App** (required for development)
 
 2. **Open any Figma file** or create a new one
 

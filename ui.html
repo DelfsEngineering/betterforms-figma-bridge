@@ -82,6 +82,8 @@
     }
   </style>
   <script>
+    const VERSION = '0.1.0'
+    const BUILD = 2
     let state = { apiKey: '', activeTab: 'preview', selectionData: null, sending: false }
 
     onmessage = (event) => {
@@ -103,6 +105,8 @@
     // Handshake so worker can resend stored key on reload
     window.addEventListener('load', () => {
       parent.postMessage({ pluginMessage: { type: 'ui-ready' } }, '*')
+      const vf = document.getElementById('versionFooter')
+      if (vf) vf.textContent = `v${VERSION} • build ${BUILD}`
     })
 
     function save() {
@@ -148,7 +152,7 @@
       renderSendButton()
       clearFeedback()
       try {
-        const response = await fetch('https://appdev.fmbetterforms.com/api/figma', {
+        const response = await fetch('https://appdev.fmbetterforms.com/api/v1/figma', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -157,7 +161,27 @@
           })
         })
         if (!response.ok) {
-          throw new Error(`Server responded with ${response.status}`)
+          let serverMsg = ''
+          try {
+            const ct = response.headers.get('content-type') || ''
+            if (ct.includes('application/json')) {
+              const errJson = await response.json()
+              serverMsg = errJson && (errJson.message || errJson.error || JSON.stringify(errJson)).toString()
+            } else {
+              serverMsg = (await response.text()) || ''
+            }
+          } catch {}
+          const hint = (status => {
+            if (status === 401) return 'Please check your API key.'
+            if (status === 403) return 'You do not have permission to perform this action.'
+            if (status === 404) return 'Endpoint not found. Please update the plugin or contact support.'
+            if (status === 429) return 'Rate limit exceeded. Please wait and try again.'
+            if (status === 422) return 'Validation failed. Ensure your selection is valid.'
+            if (status >= 500) return 'The server encountered an error. Try again later.'
+            return ''
+          })(response.status)
+          const msg = [`Server responded with ${response.status} ${response.statusText || ''}`.trim(), serverMsg, hint].filter(Boolean).join(' — ')
+          throw new Error(msg)
         }
         const result = await response.json()
         showFeedback('Successfully sent to BetterForms!', 'success')
@@ -385,6 +409,9 @@
         </div>
       </div>
     </div>
+  </div>
+  <div class="section" id="footer">
+    <div class="small" id="versionFooter"></div>
   </div>
 </body>
 </html>
