@@ -46,6 +46,9 @@ function serializeNode(node: SceneNode, depth: number): any {
 		locked: (node as any).locked === true
 	};
 
+	// Mark whether this node is directly under the page (top-level frame/component/etc.)
+	out.isTopLevel = !!(node.parent && (node.parent as any).type === 'PAGE');
+
 	if ('width' in node && 'height' in node) {
 		out.size = { w: (node as any).width, h: (node as any).height };
 	}
@@ -153,10 +156,49 @@ async function postSelectionFull() {
     const data = sel.map(n => serializeNode(n, 6));
     if (sel[0]) {
         try {
-            const png = await sel[0].exportAsync({ format: 'PNG', constraint: { type: 'SCALE', value: 0.25 } });
+            const node = sel[0];
+            const exportNode: SceneNode = node;
+
+            const w = (exportNode as any).width as number | undefined;
+            const h = (exportNode as any).height as number | undefined;
+            console.log('Export node dimensions:', { name: exportNode.name, type: exportNode.type, w, h });
+
+            // Generate a higher‑quality preview by targeting a larger longest edge.
+            // This improves visual crispness in the ~400px tall preview panel.
+            // 1400px provides good quality while keeping export speed reasonable.
+            const targetLongestPx = 1400;
+            let constraint: any = { type: 'SCALE', value: 3 };
+            if (typeof w === 'number' && typeof h === 'number' && w > 0 && h > 0) {
+                if (w >= h) {
+                    constraint = { type: 'WIDTH', value: targetLongestPx };
+                } else {
+                    constraint = { type: 'HEIGHT', value: targetLongestPx };
+                }
+            }
+
+            // Additionally export a small thumbnail for downstream apps (e.g., BetterForms UI lists).
+            // Strategy:
+            // - For tiny nodes (<= 180px on longest edge), export at 2x for sharpness
+            // - Otherwise clamp longest edge to ~360px to keep file size small
+            const targetThumbLongestPx = 100;
+            let thumbConstraint: any = { type: 'SCALE', value: 1 };
+            if (typeof w === 'number' && typeof h === 'number') {
+                if (w >= h) thumbConstraint = { type: 'WIDTH', value: targetThumbLongestPx }; else thumbConstraint = { type: 'HEIGHT', value: targetThumbLongestPx };
+            }
+
+            const png = await exportNode.exportAsync({ format: 'PNG', constraint });
             const b64 = uint8ToBase64(png);
             (data[0] as any).previewUrl = `data:image/png;base64,${b64}`;
-            console.log('Preview generated successfully, length:', b64.length);
+
+            // Export thumbnail
+            try {
+                const thumbPng = await exportNode.exportAsync({ format: 'PNG', constraint: thumbConstraint });
+                const thumbB64 = uint8ToBase64(thumbPng);
+                (data[0] as any).thumbnailUrl = `data:image/png;base64,${thumbB64}`;
+                console.log('Preview/Thumb generated. preview:', constraint.type, constraint.value, 'thumb:', thumbConstraint.type, (thumbConstraint as any).value);
+            } catch (thumbErr) {
+                console.warn('Thumbnail export failed:', thumbErr);
+            }
         } catch (e) {
             console.error('Preview export failed:', e);
         }
