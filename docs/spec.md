@@ -130,6 +130,111 @@ Figma JSON ─────────┼─> Medium (10-50 elements)
 5. If savings > 60% with no quality loss → build full system
 6. If savings < 30% or quality drops → stick with pure LLM
 
+#### JS Preprocessor Specification (Routing + Scope)
+
+Goal: deterministically convert mechanical Figma properties into a draft BetterForms JSON, reduce token/cost, and route to the right prompt/model based on complexity.
+
+Modes and Routing
+- Client flag in request body: `preprocess: "auto" | "on" | "off"` (default: `auto`)
+- Backend chooses prompt/model by complexity and flag.
+
+Request (plugin → BF)
+```json
+{
+  "data": [ /* selection nodes */ ],
+  "tokens": { "all": {"…": {}}, "used": [ {"…": {}} ] },
+  "preprocess": "auto",
+  "routeHint": "auto"
+}
+```
+
+Backend routing (concept)
+```ts
+const { preprocess = "auto" } = req.body
+const complexity = scoreComplexity(req.body.data)
+const force = preprocess === "on" ? "pre" : preprocess === "off" ? "raw" : null
+const route = force ?? (complexity <= 40 ? "pre" : "raw")
+// route=pre → run JS preprocessor, use "preprocessed" prompt
+// route=raw → skip pre, use full prompt directly
+```
+
+Preprocessor I/O Contract
+- Input: `data[]` (selection), `tokens` (all/used)
+- Output for LLM (appended to payload):
+  - `draftSchema`: minimal BF skeleton (no semantic guesses)
+  - `meta.preprocessor`: `{ complexityScore, metrics, issues[], recommendedRoute, version }`
+  - `normalizedData`: normalized Figma props (rounded numbers, canonical enums)
+
+Deterministic Transforms (handled in JS)
+1) Identity & Naming
+   - Generate `attributes['data-idbf']` for groups/elements
+   - Create `BFName` from `node.name` (lowercase, underscores, ≤50 chars)
+
+2) Structure Scaffolding
+   - FRAME/GROUP/INSTANCE → `{ type: "group", fields: [] }`
+   - TEXT → `{ type: "html", html: node.characters }` (no icon detection)
+   - RECTANGLE/ELLIPSE/VECTOR → `{ type: "html" }` with size only
+
+3) Layout (AutoLayout → Flex)
+   - direction: HORIZONTAL → `flex flex-row`; VERTICAL → `flex flex-col`
+   - gap: `gap-[{itemSpacing}px]`
+   - padding: `p-[{t}px]` or per-side when asymmetric
+   - child overrides: `layoutGrow:1` → `flex-1`; `layoutAlign:STRETCH` → `self-stretch`; CENTER → `self-center`
+
+4) Sizing & Position
+   - `w-[{w}px]`, `h-[{h}px]` (rounded)
+   - FIXED/AUTO/FILL → `w-[px]/w-auto/w-full` (prefer `flex-1` for width in flex children)
+   - ABSOLUTE → `absolute top-[ypx] left-[xpx]`
+   - min/max → `min-w-[px] max-w-[px] min-h-[px] max-h-[px]`
+
+5) Overflow
+   - direction → `overflow-x-auto` / `overflow-y-auto` / `overflow-auto`
+   - `clips:true` → `overflow-hidden`
+
+6) Corners & Borders (basic)
+   - radius → `rounded-[px]` or per-corner variants
+   - stroke → `border-[px]` + `border-[#hex]` or token var
+
+7) Background (SOLID only)
+   - First visible SOLID fill → `bg-[var(--Token)]` else `bg-[#hex]`
+   - Skip when `fills:[]` or `visible:false`
+   - Gradients/Images: pass through normalized `fills[]` (no classes)
+
+8) Tokens
+   - Prefer `tokens.used`; fallback to exact matches in `tokens.all`
+   - Emit CSS vars `var(--{tokenName})` when available
+
+9) Numeric Precision
+   - px rounded to ints when close; else 1–2 decimals
+   - font sizes to whole numbers
+
+Passed-through (LLM decides)
+- Icon fonts (Font Awesome/Material) and `<i>` vs button `icon` property
+- Semantic types (button vs div, inputs, cards, nav)
+- Grid vs flex, wrapping, advanced alignment
+- Gradients to CSS, multiple shadows to arbitrary values
+- Vector/SVG handling and placeholders
+
+Complexity Scoring (0–100)
+- Features counted: `elementCount`, `absoluteCount`, `gradientsCount`, `vectorsCount`, `multiEffectsCount`, `instancesCount`
+- Weighted sum → score; thresholds: `<=40` → route "pre", `>40` → route "raw" (tunable)
+
+Routing Matrix (examples)
+- pre → Claude 3.5 + "preprocessed" prompt (polish-only)
+- raw → GPT‑5/o1‑mini + full constraint prompt
+- Manual override: `preprocess:"on"|"off"`
+
+Diagnostics & Safety
+- Include `meta.preprocessor.metrics` and `issues[]` (e.g., "gradient present → LLM")
+- On error: fall back to raw route and record reason
+
+Milestones
+- v0: Buttons/simple groups → scaffold + size + padding + bg + border
+- v1: Absolute/min-max/overflow/tokens
+- v2: Per-corner radii, child alignment overrides
+
+---
+
 ### Progress (Dev Log)
 - Added UI with fixed red header and logo; API key Save/Logout.
 - Persist API key in clientStorage; Logout clears it.
