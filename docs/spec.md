@@ -20,6 +20,116 @@ Acceptance criteria:
 
 ### Future Additions
 
+#### Hybrid Approach: JS Preprocessor + LLM Polish
+
+**Concept:** Instead of sending raw Figma data to LLM, use JavaScript to handle deterministic conversions first, then let LLM handle semantic understanding and polish.
+
+**Architecture Options:**
+
+**Option A: Pure LLM (Current)**
+```
+Figma JSON → LLM (Claude/GPT) → BetterForms JSON
+```
+- **Pros:** Simple, flexible, easy to evolve
+- **Cons:** Slower (~30s), expensive ($0.15), overkill for simple designs
+
+**Option B: JS Preprocessor + LLM Polish**
+```
+Figma JSON → JS Converter → Draft BF JSON → LLM → Final BF JSON
+```
+
+**What JS Can Handle (Deterministic):**
+1. **Structural scaffolding**
+   - `FRAME` → `{ type: "group", fields: [] }`
+   - `TEXT` → `{ type: "html", html: node.characters }`
+
+2. **Attribute generation**
+   - `data-idbf` from node.id
+   - `BFName` normalization (lowercase, underscores, trim)
+
+3. **Basic Tailwind conversion**
+   - Size: `w-[${node.width}px]`, `h-[${node.height}px]`
+   - Padding: `p-[${node.paddingTop}px]`
+   - AutoLayout: `HORIZONTAL` → `flex flex-row`, `gap-[${itemSpacing}px]`
+
+4. **Token substitution**
+   - If color matches token → `bg-[var(--${tokenName})]`
+
+5. **Layout basics**
+   - `layoutMode: "HORIZONTAL"` → `flex flex-row`
+   - `primaryAxisSizingMode: "FILL"` → `w-full`
+
+**What LLM Still Handles (Semantic Understanding):**
+1. **Component type detection**
+   - "Is this frame a button or just a styled div?"
+   - "Is this text an input label or display text?"
+   - "Is this a card, form, navigation, or generic group?"
+
+2. **Layout intelligence**
+   - "These 3 equal-width items need `grid grid-cols-3`"
+   - "This scrollable area needs `overflow-y-auto`"
+   - "This fixed header needs `sticky top-0`"
+
+3. **Style refinement**
+   - "Use `w-full` instead of `w-[500px]` for responsive"
+   - "Use `rounded-lg` instead of `rounded-[8px]`"
+   - "Combine to `shadow-md` instead of custom values"
+
+4. **Icon detection & handling**
+   - Font Awesome text → `<i class="fa-regular fa-edit">`
+   - Extract icon name from character/unicode
+
+5. **Edge cases**
+   - Complex gradients → inline styles
+   - Multiple shadows → arbitrary values
+   - Validation & cleanup
+
+**Option C: Tiered System**
+```
+                    ┌─> Simple (< 10 elements)
+                    │   → JS Only (instant, free)
+                    │
+Figma JSON ─────────┼─> Medium (10-50 elements)  
+                    │   → JS + Claude 3.5 (3s, $0.02)
+                    │
+                    └─> Complex (50+ elements)
+                        → JS + GPT-5 (15s, $0.08)
+```
+- **Pros:** Optimal cost/speed/quality for each case
+- **Cons:** Most complex to build and maintain
+
+**Estimated Performance Impact:**
+
+**Current (Pure LLM):**
+- Simple button: 28s, $0.15, 95% quality
+- Complex header (75 elements): 35s, $0.18, 94% quality
+
+**With JS Preprocessing:**
+- Simple button: 1s JS + 5s LLM = 6s (78% faster), $0.03 (80% cheaper), ~93% quality
+- Complex header: 2s JS + 12s LLM = 14s (60% faster), $0.07 (61% cheaper), ~94% quality
+
+**Decision Framework:**
+
+**Use JS Preprocessor when:**
+- ✅ Doing 100+ conversions/month (cost savings)
+- ✅ Speed matters (user waiting in UI)
+- ✅ Designs follow consistent patterns
+- ✅ Team has time to build/maintain JS converter
+
+**Stick with Pure LLM when:**
+- ✅ Still experimenting with output format
+- ✅ Designs are highly variable/creative
+- ✅ Development speed > runtime speed
+- ✅ Cost is not a primary concern
+
+**Next Steps Before Implementation:**
+1. Analyze 20 real test cases: how much is mechanical vs semantic?
+2. Prototype simple JS converter for ONE use case (buttons)
+3. Compare JS output vs LLM output quality
+4. Measure actual time/cost/quality savings
+5. If savings > 60% with no quality loss → build full system
+6. If savings < 30% or quality drops → stick with pure LLM
+
 ### Progress (Dev Log)
 - Added UI with fixed red header and logo; API key Save/Logout.
 - Persist API key in clientStorage; Logout clears it.
