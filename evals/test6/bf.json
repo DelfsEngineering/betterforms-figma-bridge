@@ -1,0 +1,146 @@
+{
+"type": "group",
+"styleClasses": "flex flex-col gap-[8px] items-start w-auto h-auto",
+"attributes": {
+"data-idbf": "idbf_g_632_104"
+},
+"fields": [
+{
+"type": "html",
+"html": "<h3 class="text-[18px] font-semibold text-[#111827] leading-[28px]">Summary</h3>",
+"styleClasses": "w-[468px] h-[28px]",
+"attributes": {
+"data-idbf": "idbf_e_I632_104_69_1923"
+},
+"BFName": "input_placeholder_small_off"
+},
+{
+"type": "html",
+"html": "<p class="text-[14px] text-[#111827] leading-[20px]">Corem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis.</p>",
+"styleClasses": "w-[468px] h-[40px]",
+"attributes": {
+"data-idbf": "idbf_e_I632_104_69_1924"
+},
+"BFName": "input_placeholder_small_off"
+},
+{
+"type": "group",
+"styleClasses": "flex flex-row gap-[8px] px-[8px] py-[4px] border border-[#0284c7] rounded-tr-[4px] rounded-br-[4px] w-[468px] h-[28px] items-center justify-start",
+"attributes": {
+"data-idbf": "idbf_g_I632_104_69_1969"
+},
+"fields": [
+{
+"type": "html",
+"html": "<span class="text-[14px] text-[#0284c7] leading-[20px]">Expand</span>",
+"styleClasses": "w-[424px] h-[20px]",
+"attributes": {
+"data-idbf": "idbf_e_I632_104_69_1969_69_1872"
+},
+"BFName": "input_placeholder_small_off"
+},
+{
+"type": "group",
+"styleClasses": "w-[20px] h-[20px] flex items-center justify-center",
+"attributes": {
+"data-idbf": "idbf_g_I632_104_69_1969_69_1873"
+},
+"fields": [
+{
+"type": "html",
+"html": "<i class="fa-regular fa-chevron-down"></i>",
+"styleClasses": "text-[16px] text-[#0c4a6e]",
+"attributes": {
+"data-idbf": "idbf_e_I632_104_69_1969_69_1873_2049_1189"
+},
+"BFName": "icon"
+}
+],
+"BFName": "icon"
+}
+],
+"BFName": "component_message_accordion"
+},
+{
+"type": "group",
+"styleClasses": "flex flex-row gap-[4px] w-[468px] h-[24px] items-center justify-start hidden",
+"attributes": {
+"data-idbf": "idbf_g_I632_104_69_1926"
+},
+"fields": [
+{
+"type": "button",
+"icon": "fa-regular fa-undo",
+"buttonClasses": "w-[24px] h-[24px] text-[16px] text-[#4b5563] flex items-center justify-center rounded-[4px]",
+"actions": [
+{
+"action": "namedAction",
+"name": "OnClick_Component_Chat_Message_Actions_Icon_Buttons"
+}
+],
+"attributes": {
+"data-idbf": "idbf_e_I632_104_69_1926_23_1241"
+},
+"BFName": "component_chat_message_actions_icon_buttons"
+},
+{
+"type": "button",
+"icon": "fa-regular fa-thumbs-down",
+"buttonClasses": "w-[24px] h-[24px] text-[16px] text-[#4b5563] flex items-center justify-center rounded-[4px]",
+"actions": [
+{
+"action": "namedAction",
+"name": "OnClick_Component_Chat_Message_Actions_Icon_Buttons"
+}
+],
+"attributes": {
+"data-idbf": "idbf_e_I632_104_69_1926_23_1242"
+},
+"BFName": "component_chat_message_actions_icon_buttons"
+}
+],
+"BFName": "component_chat_message_actions"
+},
+{
+"type": "group",
+"styleClasses": "flex flex-row gap-[8px] w-[468px] h-[28px] items-start justify-start hidden",
+"attributes": {
+"data-idbf": "idbf_g_I632_104_69_1927"
+},
+"fields": [
+{
+"type": "button",
+"text": "Action 1",
+"buttonClasses": "px-[8px] py-[4px] bg-[#ffffff] border border-[#d1d5db] rounded-[4px] w-[70px] h-[28px] text-[14px] font-medium text-[#0284c7] flex items-center justify-center",
+"actions": [
+{
+"action": "namedAction",
+"name": "OnClick_Component_Chat_Button"
+}
+],
+"attributes": {
+"data-idbf": "idbf_e_I632_104_69_1928"
+},
+"BFName": "component_chat_button"
+},
+{
+"type": "button",
+"text": "Action 1",
+"buttonClasses": "px-[8px] py-[4px] bg-[#ffffff] border border-[#d1d5db] rounded-[4px] w-[70px] h-[28px] text-[14px] font-medium text-[#0284c7] flex items-center justify-center",
+"actions": [
+{
+"action": "namedAction",
+"name": "OnClick_Component_Chat_Button"
+}
+],
+"attributes": {
+"data-idbf": "idbf_e_I632_104_69_1929"
+},
+"BFName": "component_chat_button"
+}
+],
+"BFName": "frame_1174"
+}
+],
+"BFName": "frame_1164"
+}
