@@ -10,6 +10,12 @@ What it did wrong:
 -No text in schema
 -Buttons don't render
 
+Deep Dive:
+-This tailwind was present in parent group but failed to have proper effects- gap-[12px] py-[12px] px-[16px]
+-bg-[#ffffff] didnt render but bg-white does
+-fa-regular fa-edit proper fontawsome icons but they don't render
+-ruined positioning by adding justify-start
+
 AI generated improved prompt (failed on same test case): 
 Task
 Convert a single selected Figma node (JSON) to a single FileMaker BetterForms schema JSON object that visually matches the design using TailwindCSS utilities.

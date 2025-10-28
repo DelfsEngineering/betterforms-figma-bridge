@@ -11,6 +11,11 @@ What it got wrong:
 -Didn't escape all quotes
 -Colour doesn't render
 
+Deep Dive:
+-[#ffc700] doesn't render but when replaced by yellow-400 it does
+-ai added justify-start and items-start which forced all children to top left corner
+-corner uses w-[22px] which doesn't render but w-6 does
+
 AI generated fixed prompt (failed on same test case):
 Task
 Convert a selected Figma node (JSON) to a single BetterForms schema JSON object that visually matches the design using TailwindCSS utilities.
