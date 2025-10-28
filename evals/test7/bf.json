@@ -1,0 +1,43 @@
+{
+  "type": "group",
+  "styleClasses": "flex flex-row gap-[8px] pt-[8px] pr-[8px] pb-[8px] pl-[8px] bg-[#ffffff] rounded-[4px] w-[484px] h-[40px]",
+  "attributes": {
+    "data-idbf": "idbf_g_631_95"
+  },
+  "fields": [
+    {
+      "type": "html",
+      "html": "<span>Chat title</span>",
+      "styleClasses": "text-[14px] font-medium leading-[20px] text-[#111827]",
+      "attributes": {
+        "data-idbf": "idbf_e_I631_95_75_1533"
+      },
+      "BFName": "input_placeholder_small_off_left"
+    },
+    {
+      "type": "html",
+      "html": "<span>09/04/2025</span>",
+      "styleClasses": "text-[14px] font-normal leading-[20px] text-[#9ca3af] text-right",
+      "attributes": {
+        "data-idbf": "idbf_e_I631_95_75_4714"
+      },
+      "BFName": "input_placeholder_small_off_right"
+    },
+    {
+      "type": "button",
+      "icon": "fa-regular fa-ellipsis-v",
+      "buttonClasses": "w-[24px] h-[24px] rounded-[4px] text-[16px] text-[#4b5563] flex items-center justify-center",
+      "actions": [
+        {
+          "action": "namedAction",
+          "name": "OnClick_component_chat_message_actions_icon_buttons"
+        }
+      ],
+      "attributes": {
+        "data-idbf": "idbf_e_I631_95_75_1534"
+      },
+      "BFName": "component_chat_message_actions_icon_buttons"
+    }
+  ],
+  "BFName": "group_frame_1181"
+}

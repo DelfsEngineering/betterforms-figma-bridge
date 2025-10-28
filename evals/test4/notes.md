@@ -12,3 +12,8 @@ What it did wrong:
 -Elements are not positioned correctly (in schema it looks ok but renders like there is no css)
 -Doesn't escape all quotes
 
+
+Deep dive notes:
+- used justify-center when it should have been justify-between
+- color renders when using bg-white/black but not bg-[#ffffff]
+- used input_placeholder_small_off when html or text would be ideal

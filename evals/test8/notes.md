@@ -7,7 +7,8 @@ What it did right:
 -Schema includes the rectangle structures
 -Schema includes the required text
 -Background colour is in schema
+-Text is present in schema and renders with correct style
 
 What it did wrong:
--Nothing renders
--Created massive 'preview url' and 'thumnail url' that was not in figma json and 
+-Corner squares render as bar to the left of text
+-Colour doesn't render
