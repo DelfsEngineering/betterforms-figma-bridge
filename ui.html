@@ -3,22 +3,24 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>BetterForms Figma Bridge</title>
+  <title>FM BetterForms Figma Bridge</title>
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; font: 12px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #111827; }
-    .header { background: #ffffff; border-bottom: 1px solid #e5e7eb; padding: 12px; display: flex; align-items: center; gap: 8px; }
+    body { margin: 0; padding: 0; font: 12px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #111827; }
+    .header { background: #ffffff; border-bottom: 1px solid #e5e7eb; padding: 8px 12px; display: flex; align-items: center; gap: 8px; }
     .header .spacer { flex: 1; }
-    .header img { height: 18px; display: block; }
-    .section { padding: 12px; border-bottom: 1px solid #e5e7eb; }
+    .header img { height: 16px; display: block; }
+    .section { padding: 0; border-bottom: none; }
     .row { display: flex; gap: 8px; align-items: center; }
     .row.inline { gap: 8px; }
     .row > label { width: 84px; color: #374151; }
     input[type="text"], input[type="password"] { flex: 1; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 4px; }
+    input[type="text"]::placeholder, input[type="password"]::placeholder { color: #9ca3af; }
+    #elementName { flex: none !important; }
     
     .actions { display: flex; gap: 8px; }
     button { appearance: none; border: 1px solid #d1d5db; background: #f9fafb; padding: 6px 10px; border-radius: 4px; cursor: pointer; }
-    button.primary { background: #ef4444; color: white; border-color: #ef4444; }
+    button.primary { background: #0369a1; color: white; border-color: #0369a1; }
     button:disabled { opacity: 0.5; cursor: not-allowed; }
     button.wide { width: 100%; }
     .small { font-size: 11px; color: #6b7280; }
@@ -27,15 +29,15 @@
     .feedback.error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
 
     /* Tabs */
-    .tabs { display: flex; border-bottom: 1px solid #e5e7eb; margin: 8px 0 12px; }
-    .tab { padding: 6px 10px; cursor: pointer; border: 1px solid transparent; border-bottom: none; background: transparent; font-weight: 600; color: #374151; }
-    .tab.active { background: #ffffff; border-color: #e5e7eb; border-top-left-radius: 4px; border-top-right-radius: 4px; color: #111827; }
+    .tabs { display: flex; border-bottom: 1px solid #e5e7eb; margin: 0; padding: 4px 12px 0; gap: 4px; }
+    .tab { padding: 8px 16px; cursor: pointer; border: none; background: transparent; font-weight: 500; color: #6b7280; font-size: 13px; border-radius: 6px 6px 0 0; margin-bottom: -1px; }
+    .tab.active { background: #f3f4f6; color: #111827; }
     .tabpane { display: none; }
-    .tabpane.active { display: flex; flex-direction: column; height: 400px; }
-    .tabpane-content { flex: 1; overflow: auto; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; }
+    .tabpane.active { display: flex; flex-direction: column; height: 435px; }
+    .tabpane-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
     .tabpane-footer { flex-shrink: 0; }
     .empty-state { display: flex; align-items: center; justify-content: center; min-height: 200px; color: #9ca3af; font-size: 13px; }
-    #preview { border-radius: 4px; padding: 16px; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+    #preview { border-radius: 4px; padding: 16px; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #F5F5F5; }
     
     /* JSON tab with copy button */
     .json-container { position: relative; width: 100%; height: 100%; }
@@ -80,11 +82,150 @@
         opacity: 0;
       }
     }
+    
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal-overlay.active {
+      display: flex;
+    }
+    .modal {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      max-width: 400px;
+      width: 90%;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .modal-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      padding: 0;
+      color: #6b7280;
+    }
+    .modal-body {
+      margin-bottom: 16px;
+    }
+    .modal-setting {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .modal-setting:last-child {
+      border-bottom: none;
+    }
+    .modal-setting-label {
+      flex: 1;
+    }
+    .modal-setting-label strong {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+    .modal-setting-label .small {
+      display: block;
+      color: #6b7280;
+      font-size: 11px;
+    }
+    
+    /* Toggle Switch */
+    .toggle-switch {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #d1d5db;
+      transition: 0.3s;
+      border-radius: 24px;
+    }
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: 0.3s;
+      border-radius: 50%;
+    }
+    .toggle-switch input:checked + .toggle-slider {
+      background-color: #0369a1;
+    }
+    .toggle-switch input:checked + .toggle-slider:before {
+      transform: translateX(20px);
+    }
+    
+    /* Ellipsis button */
+    .ellipsis-btn {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 4px 8px;
+      font-size: 18px;
+      color: #6b7280;
+      line-height: 1;
+    }
+    .ellipsis-btn:hover {
+      color: #111827;
+    }
   </style>
   <script>
-    const VERSION = '0.1.0'
-    const BUILD = 25
-    let state = { apiKey: '', activeTab: 'preview', selectionData: null, tokens: null, sending: false, sendAs: 'element' }
+    const VERSION = '0.6.67'
+    const BUILD = 67
+    let state = { 
+      apiKey: '', 
+      activeTab: 'preview', 
+      selectionData: null, 
+      tokens: null, 
+      sending: false, 
+      sendAs: 'element', 
+      elementName: '',
+      preprocessing: {
+        enabled: true,
+        mode: 'auto'
+      },
+      stripAllSvg: false, // Strip all SVG exports, not just >20KB
+      outerElementFullWidth: true, // Outer element uses 100% width (default ON)
+      lastTestCase: null // Stores: { source, preprocessorResult, prompt, llmOutput, meta }
+    }
 
     onmessage = (event) => {
       const msg = event.data.pluginMessage
@@ -95,6 +236,14 @@
         if (inp) inp.value = state.apiKey
         renderHeader()
         renderAccountSection()
+        // Load preprocessing settings
+        loadPreprocessingSettings(msg.preprocessEnabled, msg.preprocessMode)
+        // Load export settings
+        loadExportSettings(msg.stripAllSvg, msg.outerElementFullWidth)
+        // Switch to account tab if no API key
+        if (!state.apiKey) {
+          setActiveTab('account')
+        }
       }
       if (msg.type === 'selection.full') {
         state.sendAs = inferSendType(msg.selection)
@@ -108,7 +257,7 @@
     window.addEventListener('load', () => {
       parent.postMessage({ pluginMessage: { type: 'ui-ready' } }, '*')
       const vf = document.getElementById('versionFooter')
-      if (vf) vf.textContent = `v${VERSION} • build ${BUILD}`
+      if (vf) vf.textContent = `v${VERSION}`
     })
 
     function save() {
@@ -141,6 +290,93 @@
       if (saved) saved.style.display = state.apiKey ? 'block' : 'none'
     }
 
+    function updateElementName(value) {
+      state.elementName = value
+    }
+
+    function togglePreprocessingMode() {
+      const checkbox = document.getElementById('preprocessingEnabled')
+      const modeGroup = document.getElementById('preprocessModeGroup')
+      
+      state.preprocessing.enabled = checkbox.checked
+      modeGroup.style.display = checkbox.checked ? 'block' : 'none'
+      
+      savePreprocessingSettings()
+    }
+
+    function savePreprocessingSettings() {
+      const enabled = document.getElementById('preprocessingEnabled').checked
+      const mode = document.getElementById('preprocessMode').value
+      
+      state.preprocessing.enabled = enabled
+      state.preprocessing.mode = mode
+      
+      parent.postMessage({ 
+        pluginMessage: { 
+          type: 'save-preprocessing', 
+          enabled: enabled,
+          mode: mode
+        } 
+      }, '*')
+    }
+
+    function loadPreprocessingSettings(enabled, mode) {
+      state.preprocessing.enabled = enabled !== false
+      state.preprocessing.mode = mode || 'auto'
+      
+      const checkbox = document.getElementById('preprocessingEnabled')
+      const modeSelect = document.getElementById('preprocessMode')
+      const modeGroup = document.getElementById('preprocessModeGroup')
+      
+      if (checkbox) checkbox.checked = state.preprocessing.enabled
+      if (modeSelect) modeSelect.value = state.preprocessing.mode
+      if (modeGroup) modeGroup.style.display = state.preprocessing.enabled ? 'block' : 'none'
+    }
+
+    function loadExportSettings(stripAllSvg, outerElementFullWidth) {
+      state.stripAllSvg = stripAllSvg === true
+      state.outerElementFullWidth = outerElementFullWidth !== false // Default to true
+      
+      const stripSvgCheckbox = document.getElementById('stripAllSvgToggle')
+      if (stripSvgCheckbox) stripSvgCheckbox.checked = state.stripAllSvg
+      
+      const fullWidthCheckbox = document.getElementById('outerElementFullWidthToggle')
+      if (fullWidthCheckbox) fullWidthCheckbox.checked = state.outerElementFullWidth
+    }
+
+    function openExportModal() {
+      const modal = document.getElementById('exportModal')
+      if (modal) modal.classList.add('active')
+    }
+
+    function closeExportModal() {
+      const modal = document.getElementById('exportModal')
+      if (modal) modal.classList.remove('active')
+    }
+
+    function toggleStripAllSvg() {
+      const checkbox = document.getElementById('stripAllSvgToggle')
+      state.stripAllSvg = checkbox.checked
+      saveExportSettings()
+    }
+
+    function toggleOuterElementFullWidth() {
+      const checkbox = document.getElementById('outerElementFullWidthToggle')
+      state.outerElementFullWidth = checkbox.checked
+      saveExportSettings()
+    }
+
+    function saveExportSettings() {
+      parent.postMessage({ 
+        pluginMessage: { 
+          type: 'save-export-settings', 
+          stripAllSvg: state.stripAllSvg,
+          outerElementFullWidth: state.outerElementFullWidth
+        } 
+      }, '*')
+    }
+
+
     // Infer an export type from the current selection
     function inferSendType(selection) {
       if (!Array.isArray(selection) || selection.length === 0) return 'element'
@@ -150,6 +386,881 @@
       if (t === 'COMPONENT' || t === 'INSTANCE' || t === 'COMPONENT_SET') return 'component'
       if (n.isTopLevel && (t === 'FRAME' || t === 'GROUP')) return 'page'
       return 'element'
+    }
+
+    // ========== JS PREPROCESSOR ==========
+    
+    /**
+     * Preprocess Figma selection data to generate draft BetterForms schema
+     * @param {Array} selectionData - Figma node tree
+     * @param {Object} tokens - Design tokens (all + used)
+     * @returns {Object} { success, normalizedData, draftSchema, meta, error }
+     */
+    async function preprocessSelection(selectionData, tokens, elementName = '') {
+      const startTime = Date.now()
+      
+      try {
+        // Flatten all nodes for complexity analysis
+        const allNodes = flattenNodes(selectionData)
+        
+        // Calculate complexity metrics
+        const metrics = calculateComplexityMetrics(allNodes)
+        const complexityScore = calculateComplexityScore(metrics)
+        
+        // Always generate draft schema - let the caller decide whether to use it
+        const issues = []
+        const draftSchema = generateDraftSchema(selectionData, tokens, issues, elementName)
+        
+        // Recommend a route based on complexity (for 'auto' mode)
+        const recommendedRoute = complexityScore <= 40 ? 'pre' : 'raw'
+        
+        // Normalize data
+        const normalizedData = normalizeData(selectionData)
+        
+        const processingTime = Date.now() - startTime
+        
+        return {
+          success: true,
+          normalizedData,
+          draftSchema,
+          meta: {
+            version: '0.1.0',
+            complexityScore,
+            metrics,
+            issues,
+            recommendedRoute,
+            processingTime
+          }
+        }
+      } catch (error) {
+        console.error('Preprocessing failed:', error)
+        return {
+          success: false,
+          error: error.message,
+          normalizedData: selectionData,
+          draftSchema: null,
+          meta: null
+        }
+      }
+    }
+
+    function flattenNodes(nodes, result = []) {
+      if (!Array.isArray(nodes)) return result
+      
+      for (const node of nodes) {
+        if (!node) continue
+        result.push(node)
+        if (node.children && Array.isArray(node.children)) {
+          flattenNodes(node.children, result)
+        }
+      }
+      
+      return result
+    }
+
+    function calculateComplexityMetrics(allNodes) {
+      const metrics = {
+        elementCount: allNodes.length,
+        absoluteCount: 0,
+        gradientsCount: 0,
+        vectorsCount: 0,
+        multiEffectsCount: 0,
+        instancesCount: 0
+      }
+      
+      for (const node of allNodes) {
+        // Check for absolute positioning
+        if (node.constraints && node.constraints.horizontal === 'ABSOLUTE') {
+          metrics.absoluteCount++
+        }
+        
+        // Check for gradients
+        if (node.fills && Array.isArray(node.fills)) {
+          for (const fill of node.fills) {
+            if (fill.type && fill.type.includes('GRADIENT')) {
+              metrics.gradientsCount++
+              break
+            }
+          }
+        }
+        
+        // Check for vectors
+        if (node.type === 'VECTOR') {
+          metrics.vectorsCount++
+        }
+        
+        // Check for multiple effects (shadows, blurs)
+        if (node.effects && Array.isArray(node.effects) && node.effects.length > 2) {
+          metrics.multiEffectsCount++
+        }
+        
+        // Check for instances
+        if (node.type === 'INSTANCE') {
+          metrics.instancesCount++
+        }
+      }
+      
+      return metrics
+    }
+
+    function calculateComplexityScore(metrics) {
+      const score = 
+        metrics.elementCount * 0.5 +
+        metrics.absoluteCount * 2 +
+        metrics.gradientsCount * 3 +
+        metrics.vectorsCount * 1.5 +
+        metrics.multiEffectsCount * 2 +
+        metrics.instancesCount * 1
+      
+      return Math.min(100, Math.round(score))
+    }
+
+    function normalizeData(data) {
+      // For now, just return a deep clone
+      // Future: normalize colors, round numbers, etc.
+      return JSON.parse(JSON.stringify(data))
+    }
+
+    function generateDraftSchema(selectionData, tokens, issues, elementName = '') {
+      if (!selectionData || selectionData.length === 0) return null
+      
+      const rootNode = selectionData[0]
+      
+      // Process the root node (pass true for isRootNode)
+      const rootFields = processNodeToFields(rootNode, tokens, issues, true)
+      
+      // If elementName override is provided, set it on the root element
+      if (elementName && rootFields.length > 0) {
+        // Convert to lowercase with underscores
+        const bfName = elementName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
+        rootFields[0].BFName = bfName
+      }
+      
+      // Generate BetterForms schema
+      const schema = {
+        pages: [{
+          schema: {
+            fields: rootFields
+          }
+        }],
+        model: {},
+        options: {}
+      }
+      
+      return schema
+    }
+
+    function processNodeToFields(node, tokens, issues, isRootNode = false) {
+      if (!node) return []
+      
+      const fields = []
+      
+      // Process based on node type
+      if (node.type === 'TEXT') {
+        fields.push(processTextNode(node, tokens, issues))
+      } else if (node.type === 'FRAME' || node.type === 'GROUP' || node.type === 'INSTANCE') {
+        fields.push(processContainerNode(node, tokens, issues, isRootNode))
+      } else if (node.type === 'RECTANGLE' || node.type === 'ELLIPSE' || node.type === 'VECTOR') {
+        fields.push(processShapeNode(node, tokens, issues))
+      }
+      
+      return fields
+    }
+
+    function processTextNode(node, tokens, issues) {
+      const field = {
+        type: 'html',
+        html: node.characters || '',
+        styleClasses: ['mb-0'],  // Default margin override (LLM can change)
+        attributes: {
+          formElement: {
+            'data-idbf': node.id
+          }
+        }
+      }
+      
+      // Add size classes
+      if (node.size) {
+        field.styleClasses.push(`w-[${Math.round(node.size.w)}px]`)
+        field.styleClasses.push(`h-[${Math.round(node.size.h)}px]`)
+      }
+      
+      // Add text styles
+      if (node.textStyle) {
+        // Font size
+        if (node.textStyle.fontSize && typeof node.textStyle.fontSize === 'number') {
+          field.styleClasses.push(`text-[${Math.round(node.textStyle.fontSize)}px]`)
+        }
+        
+        // Font weight - Figma stores as string in fontName.style
+        if (node.textStyle.fontName && node.textStyle.fontName.style) {
+          const style = node.textStyle.fontName.style.toLowerCase()
+          if (style.includes('extra bold') || style.includes('extrabold') || style.includes('black')) {
+            field.styleClasses.push('font-extrabold')
+          } else if (style.includes('bold')) {
+            field.styleClasses.push('font-bold')
+          } else if (style.includes('semibold') || style.includes('semi bold')) {
+            field.styleClasses.push('font-semibold')
+          } else if (style.includes('medium')) {
+            field.styleClasses.push('font-medium')
+          }
+          // Regular/Light/Thin - no class needed (default)
+        }
+        
+        // Store font family in a custom data attribute for LLM to use
+        if (node.textStyle.fontName && node.textStyle.fontName.family) {
+          field.attributes.formElement['data-figma-font'] = node.textStyle.fontName.family
+        }
+      }
+      
+      // Add TEXT COLOR (not background)
+      const textColor = getTextColor(node, tokens)
+      if (textColor) field.styleClasses.push(textColor)
+      
+      field.styleClasses = field.styleClasses.join(' ')
+      
+      return field
+    }
+
+    function processContainerNode(node, tokens, issues, isRootNode = false) {
+      // Check if this GROUP has SVG export (e.g., icon groups like "ic_star")
+      // BUT: Only use SVG if children are simple (vectors, not frames/components)
+      if (node.type === 'GROUP' && node.svg) {
+        // Check if children are complex (FRAMEs, COMPONENTS, etc.)
+        const hasComplexChildren = node.children && node.children.some(child => 
+          child.type === 'FRAME' || 
+          child.type === 'COMPONENT' || 
+          child.type === 'INSTANCE' ||
+          child.type === 'TEXT'
+        )
+        
+        // If children are complex, process as container (don't use SVG)
+        if (hasComplexChildren) {
+          issues.push(`GROUP "${node.name}" has complex children - processing as container instead of SVG`)
+          // Fall through to normal container processing
+        } else {
+          // Simple children (vectors, etc.) - export as SVG icon
+          const field = {
+            type: 'html',  // SVG uses type: "html"
+            html: node.svg,
+            styleClasses: ['mb-0']  // Default margin override (LLM can change)
+          }
+          
+          // Add size classes if available
+          if (node.size) {
+            field.styleClasses.push(`w-[${Math.round(node.size.w)}px]`)
+            field.styleClasses.push(`h-[${Math.round(node.size.h)}px]`)
+          }
+          
+          // Add attributes in correct BetterForms format
+          field.attributes = {
+            formElement: {
+              'data-idbf': node.id
+            }
+          }
+          
+          field.styleClasses = field.styleClasses.join(' ')
+          return field
+        }
+      }
+      
+      const field = {
+        type: 'group',
+        label: node.name || 'Container',
+        styleClasses: ['mb-0'],  // Default margin override (LLM can change)
+        fields: []  // FIX: Direct fields array, not wrapped in schema
+      }
+      
+      // Add data-idbf attribute in correct BetterForms format
+      field.attributes = {
+        formGroup: {
+          'data-idbf': node.id
+        }
+      }
+      
+      // Process autolayout - FIX #4
+      if (node.autolayout && node.autolayout.direction) {
+        const direction = node.autolayout.direction
+        
+        // Only add flex classes if has actual autolayout direction
+        if (direction === 'HORIZONTAL') {
+          field.styleClasses.push('flex', 'flex-row')
+          
+          // Add gap (Figma stores as itemSpacing)
+          const gap = node.autolayout.itemSpacing || node.autolayout.gap
+          if (gap) {
+            field.styleClasses.push(`gap-[${Math.round(gap)}px]`)
+          }
+          
+          // Add alignment
+          if (node.autolayout.align && node.autolayout.align.counter) {
+            const counterAlign = node.autolayout.align.counter
+            if (counterAlign === 'CENTER') field.styleClasses.push('items-center')
+            else if (counterAlign === 'MAX') field.styleClasses.push('items-end')
+            // MIN is default (items-start)
+          }
+        } else if (direction === 'VERTICAL') {
+          field.styleClasses.push('flex', 'flex-col')
+          
+          // Add gap (Figma stores as itemSpacing)
+          const gap = node.autolayout.itemSpacing || node.autolayout.gap
+          if (gap) {
+            field.styleClasses.push(`gap-[${Math.round(gap)}px]`)
+          }
+          
+          // Add alignment
+          if (node.autolayout.align && node.autolayout.align.counter) {
+            const counterAlign = node.autolayout.align.counter
+            if (counterAlign === 'CENTER') field.styleClasses.push('items-center')
+            else if (counterAlign === 'MAX') field.styleClasses.push('items-end')
+            // MIN is default (items-start)
+          }
+        } else if (direction === 'NONE') {
+          // No autolayout - note for LLM
+          issues.push(`No autolayout on "${node.name}" - LLM should determine positioning strategy`)
+        }
+        
+        // Add padding (regardless of direction)
+        if (node.autolayout.padding) {
+          const p = node.autolayout.padding
+          // Only add padding if it's not all zeros
+          if (p.t !== 0 || p.r !== 0 || p.b !== 0 || p.l !== 0) {
+            if (p.t === p.r && p.r === p.b && p.b === p.l) {
+              field.styleClasses.push(`p-[${Math.round(p.t)}px]`)
+            } else {
+              if (p.t !== 0) field.styleClasses.push(`pt-[${Math.round(p.t)}px]`)
+              if (p.r !== 0) field.styleClasses.push(`pr-[${Math.round(p.r)}px]`)
+              if (p.b !== 0) field.styleClasses.push(`pb-[${Math.round(p.b)}px]`)
+              if (p.l !== 0) field.styleClasses.push(`pl-[${Math.round(p.l)}px]`)
+            }
+          }
+        }
+      }
+      
+      // Add size - check for FILL sizing mode to use flex-1
+      if (node.size) {
+        // Check if this is the root node and outerElementFullWidth is enabled
+        if (isRootNode && state.outerElementFullWidth) {
+          // Use 100% width for root element so BetterForms can control sizing
+          field.styleClasses.push('w-full')
+          field.styleClasses.push(`h-[${Math.round(node.size.h)}px]`)
+        } else if (node.layoutSizingHorizontal === 'FILL' || node.layoutGrow === 1) {
+          // Check if width should be flexible (FILL mode)
+          field.styleClasses.push('flex-1')
+          // Only add height, not width
+          field.styleClasses.push(`h-[${Math.round(node.size.h)}px]`)
+        } else {
+          // Fixed size
+          field.styleClasses.push(`w-[${Math.round(node.size.w)}px]`)
+          field.styleClasses.push(`h-[${Math.round(node.size.h)}px]`)
+        }
+      }
+      
+      // Add background
+      const bgClass = getBackgroundClass(node, tokens)
+      if (bgClass) field.styleClasses.push(bgClass)
+      
+      // Add border
+      const borderClasses = getBorderClasses(node, tokens)
+      if (borderClasses.length > 0) {
+        field.styleClasses.push(...borderClasses)
+      }
+      
+      // Add corner radius
+      const radiusClass = getCornerRadiusClass(node)
+      if (radiusClass) field.styleClasses.push(radiusClass)
+      
+      // Check for absolute positioning
+      if (node.constraints && node.constraints.horizontal === 'ABSOLUTE') {
+        issues.push(`Absolute positioning on "${node.name}" - raw coordinates in absoluteTransform`)
+      }
+      
+      // Check for complex effects
+      if (node.effects && Array.isArray(node.effects) && node.effects.length > 0) {
+        const visibleEffects = node.effects.filter(e => e.visible !== false)
+        if (visibleEffects.length > 2) {
+          issues.push(`Complex effects on "${node.name}" - raw effects data provided for LLM`)
+        }
+      }
+      
+      // Process children
+      if (node.children && Array.isArray(node.children)) {
+        for (const child of node.children) {
+          const childFields = processNodeToFields(child, tokens, issues)
+          field.fields.push(...childFields)  // FIX: Use direct fields array
+        }
+      }
+      
+      field.styleClasses = field.styleClasses.join(' ')
+      
+      return field
+    }
+
+    function processShapeNode(node, tokens, issues) {
+      const field = {
+        type: 'html',
+        html: `<!-- ${node.type}: ${node.name} -->`,
+        styleClasses: ['mb-0']  // Default margin override (LLM can change)
+      }
+      
+      // Handle VECTOR nodes with SVG export
+      if (node.type === 'VECTOR' && node.svg) {
+        // Use exported SVG directly
+        field.html = node.svg
+        field.type = 'html' // SVG uses type: "html"
+        
+        // Add size classes to wrapper if needed
+        if (node.size) {
+          field.styleClasses.push(`w-[${Math.round(node.size.w)}px]`)
+          field.styleClasses.push(`h-[${Math.round(node.size.h)}px]`)
+        }
+        
+        // Add attributes in correct BetterForms format
+        field.attributes = {
+          formElement: {
+            'data-idbf': node.id
+          }
+        }
+        
+        field.styleClasses = field.styleClasses.join(' ')
+        return field
+      }
+      
+      // Check for IMAGE fill - FIX #3
+      let hasImageFill = false
+      if (node.fills && Array.isArray(node.fills)) {
+        for (const fill of node.fills) {
+          if (fill.type === 'IMAGE') {
+            hasImageFill = true
+            issues.push(`IMAGE fill on "${node.name}" - LLM should convert to <img> or background-image`)
+            break
+          }
+          if (fill.type && fill.type.includes('GRADIENT')) {
+            issues.push(`GRADIENT on "${node.name}" - raw fills data provided for LLM`)
+            break
+          }
+        }
+      }
+      
+      // Add size
+      if (node.size) {
+        field.styleClasses.push(`w-[${Math.round(node.size.w)}px]`)
+        field.styleClasses.push(`h-[${Math.round(node.size.h)}px]`)
+      }
+      
+      // Add background (only if not IMAGE)
+      if (!hasImageFill) {
+        const bgClass = getBackgroundClass(node, tokens)
+        if (bgClass) field.styleClasses.push(bgClass)
+      }
+      
+      // Add border
+      const borderClasses = getBorderClasses(node, tokens)
+      if (borderClasses.length > 0) {
+        field.styleClasses.push(...borderClasses)
+      }
+      
+      // Add corner radius
+      const radiusClass = getCornerRadiusClass(node)
+      if (radiusClass) field.styleClasses.push(radiusClass)
+      
+      if (node.type === 'VECTOR' && !node.svg) {
+        issues.push(`Vector "${node.name}" - SVG export failed, may need manual conversion`)
+      }
+      
+      // Add attributes in correct BetterForms format
+      field.attributes = {
+        formElement: {
+          'data-idbf': node.id
+        }
+      }
+      
+      field.styleClasses = field.styleClasses.join(' ')
+      
+      return field
+    }
+
+    function getTextColor(node, tokens) {
+      if (!node.fills || !Array.isArray(node.fills)) return null
+      
+      // Find first visible solid fill for text color
+      for (const fill of node.fills) {
+        if (fill.visible === false) continue  // FIX #2: Skip invisible
+        if (fill.type !== 'SOLID') continue
+        
+        const color = fill.color
+        if (!color) continue
+        
+        // Check if color matches a token
+        if (tokens && tokens.used) {
+          for (const token of tokens.used) {
+            if (colorsMatch(color, token.value)) {
+              return `text-[var(--${token.name})]`
+            }
+          }
+        }
+        
+        // Return hex color
+        return `text-[${color}]`
+      }
+      
+      return null
+    }
+
+    function getBackgroundClass(node, tokens) {
+      if (!node.fills || !Array.isArray(node.fills)) return null
+      
+      // Find first visible solid fill
+      for (const fill of node.fills) {
+        if (fill.visible === false) continue  // FIX #2: Skip invisible
+        if (fill.type !== 'SOLID') continue
+        
+        const color = fill.color
+        if (!color) continue
+        
+        // Check if color matches a token
+        if (tokens && tokens.used) {
+          for (const token of tokens.used) {
+            if (colorsMatch(color, token.value)) {
+              return `bg-[var(--${token.name})]`
+            }
+          }
+        }
+        
+        // Return hex color
+        return `bg-[${color}]`
+      }
+      
+      return null
+    }
+
+    function getBorderClasses(node, tokens) {
+      const classes = []
+      
+      if (!node.strokes || !Array.isArray(node.strokes) || node.strokes.length === 0) {
+        return classes
+      }
+      
+      // Add border width
+      if (node.strokeWeight) {
+        classes.push(`border-[${Math.round(node.strokeWeight)}px]`)
+      }
+      
+      // Add border color
+      const stroke = node.strokes[0]
+      if (stroke && stroke.type === 'SOLID' && stroke.color) {
+        const color = stroke.color
+        
+        // Check for token
+        if (tokens && tokens.used) {
+          for (const token of tokens.used) {
+            if (colorsMatch(color, token.value)) {
+              classes.push(`border-[var(--${token.name})]`)
+              return classes
+            }
+          }
+        }
+        
+        classes.push(`border-[${color}]`)
+      }
+      
+      return classes
+    }
+
+    function getCornerRadiusClass(node) {
+      if (!node.cornerRadius && typeof node.cornerRadius !== 'number') return null
+      
+      const radius = Math.round(node.cornerRadius)
+      
+      if (radius === 0) return null
+      
+      // Use standard Tailwind values when possible
+      if (radius === 4) return 'rounded'
+      if (radius === 6) return 'rounded-md'
+      if (radius === 8) return 'rounded-lg'
+      if (radius === 12) return 'rounded-xl'
+      if (radius === 16) return 'rounded-2xl'
+      if (radius === 9999) return 'rounded-full'
+      
+      return `rounded-[${radius}px]`
+    }
+
+    function colorsMatch(color1, color2) {
+      // Simple string comparison for now
+      return color1 === color2
+    }
+
+    // ========== PREPROCESSOR DEBUG ==========
+    
+    async function runPreprocessorDebug() {
+      const jsonEl = document.getElementById('json')
+      if (!jsonEl) return
+      
+      if (!state.selectionData || state.selectionData.length === 0) {
+        jsonEl.innerHTML = '<div class="empty-state">No selection to preprocess</div>'
+        return
+      }
+      
+      // Show loading state
+      jsonEl.innerHTML = '<div class="empty-state">Running preprocessor...</div>'
+      
+      try {
+        // Run preprocessor
+        const result = await preprocessSelection(state.selectionData, state.tokens, state.elementName)
+        
+        // Create debug output
+        const debugOutput = {
+          timestamp: new Date().toISOString(),
+          preprocessingEnabled: state.preprocessing.enabled,
+          preprocessingMode: state.preprocessing.mode,
+          selection: {
+            elementName: state.elementName,
+            type: state.sendAs,
+            nodeCount: state.selectionData.length,
+            rootNodeName: state.selectionData[0]?.name,
+            rootNodeType: state.selectionData[0]?.type
+          },
+          preprocessorResult: result,
+          rawData: state.selectionData
+        }
+        
+        // Log to console
+        console.log('=== PREPROCESSOR DEBUG OUTPUT ===')
+        console.log('Complexity Score:', result.meta?.complexityScore)
+        console.log('Metrics:', result.meta?.metrics)
+        console.log('Issues:', result.meta?.issues)
+        console.log('Processing Time:', result.meta?.processingTime + 'ms')
+        console.log('Draft Schema:', result.draftSchema)
+        console.log('Full Result:', debugOutput)
+        console.log('=================================')
+        
+        // Create styled output in JSON panel
+        jsonEl.innerHTML = ''
+        jsonEl.style.position = 'relative'
+        
+        // Copy button
+        const copyBtn = document.createElement('button')
+        copyBtn.className = 'copy-btn'
+        copyBtn.textContent = 'Copy Debug Output'
+        copyBtn.onclick = () => copyDebugOutput(debugOutput)
+        
+        // Pre element for JSON
+        const pre = document.createElement('pre')
+        pre.textContent = JSON.stringify(debugOutput, null, 2)
+        pre.style.fontFamily = 'ui-monospace, SFMono-Regular, Menlo, monospace'
+        pre.style.fontSize = '11px'
+        pre.style.background = '#f9fafb'
+        pre.style.border = '1px solid #e5e7eb'
+        pre.style.borderRadius = '4px'
+        pre.style.padding = '8px'
+        pre.style.paddingTop = '32px'
+        pre.style.margin = '0'
+        pre.style.overflowX = 'auto'
+        
+        // Summary section
+        const summary = document.createElement('div')
+        summary.style.cssText = 'position:absolute; top:40px; left:8px; right:8px; padding:8px; background:#dbeafe; border:1px solid #93c5fd; border-radius:4px; font-size:11px; z-index:5;'
+        
+        if (result.success) {
+          const score = result.meta?.complexityScore || 0
+          const route = result.meta?.recommendedRoute || 'unknown'
+          const time = result.meta?.processingTime || 0
+          const issueCount = result.meta?.issues?.length || 0
+          
+          summary.innerHTML = `
+            <strong>✓ Success</strong> | 
+            Score: <strong>${score}</strong> | 
+            Route: <strong>${route}</strong> | 
+            Time: <strong>${time}ms</strong> | 
+            Issues: <strong>${issueCount}</strong>
+          `
+          summary.style.background = score <= 40 ? '#d1fae5' : '#fef3c7'
+          summary.style.borderColor = score <= 40 ? '#a7f3d0' : '#fde68a'
+        } else {
+          summary.innerHTML = `<strong>✗ Failed:</strong> ${result.error}`
+          summary.style.background = '#fee2e2'
+          summary.style.borderColor = '#fecaca'
+        }
+        
+        jsonEl.appendChild(copyBtn)
+        jsonEl.appendChild(summary)
+        jsonEl.appendChild(pre)
+        
+      } catch (error) {
+        console.error('Debug run failed:', error)
+        jsonEl.innerHTML = `<div class="empty-state" style="color:#991b1b;">Error: ${error.message}</div>`
+      }
+    }
+    
+    function copyDebugOutput(debugOutput) {
+      const jsonString = JSON.stringify(debugOutput, null, 2)
+      
+      const textarea = document.createElement('textarea')
+      textarea.value = jsonString
+      textarea.style.position = 'fixed'
+      textarea.style.opacity = '0'
+      document.body.appendChild(textarea)
+      textarea.select()
+      
+      try {
+        document.execCommand('copy')
+        const btn = document.querySelector('.copy-btn')
+        if (btn) {
+          btn.classList.add('copied')
+          btn.textContent = '✓ Copied!'
+          setTimeout(() => {
+            btn.classList.remove('copied')
+            btn.textContent = 'Copy Debug Output'
+          }, 2000)
+        }
+      } catch (err) {
+        console.error('Failed to copy:', err)
+      } finally {
+        document.body.removeChild(textarea)
+      }
+    }
+
+    async function saveTestData() {
+      const statusEl = document.getElementById('testCaseStatus')
+      const btn = document.getElementById('saveTestDataBtn')
+      
+      // If no test case exists yet, create one from current selection
+      if (!state.lastTestCase) {
+        if (!state.selectionData || state.selectionData.length === 0) {
+          if (statusEl) statusEl.textContent = '⚠️ No selection to save. Select something in Figma first.'
+          setTimeout(() => { if (statusEl) statusEl.textContent = '' }, 3000)
+          return
+        }
+        
+        try {
+          // Clone and strip large base64 data
+          const dataToSend = JSON.parse(JSON.stringify(state.selectionData))
+          dataToSend.forEach(node => stripBase64Data(node))
+          const strippedSize = JSON.stringify(dataToSend).length
+          
+          // Run preprocessing
+          let preprocessMode = state.preprocessing.enabled ? state.preprocessing.mode : 'off'
+          let preprocessingPayload = {
+            enabled: false,
+            mode: 'off',
+            draftSchema: null,
+            meta: null
+          }
+          
+          if (preprocessMode !== 'off') {
+            const preprocessResult = await preprocessSelection(dataToSend, state.tokens, state.elementName)
+            if (preprocessResult.success) {
+              if (preprocessMode === 'auto' && preprocessResult.meta.recommendedRoute === 'raw') {
+                preprocessingPayload = {
+                  enabled: false,
+                  mode: 'off',
+                  draftSchema: null,
+                  meta: preprocessResult.meta
+                }
+              } else {
+                preprocessingPayload = {
+                  enabled: true,
+                  mode: preprocessMode,
+                  draftSchema: preprocessResult.draftSchema,
+                  meta: preprocessResult.meta
+                }
+              }
+            }
+          }
+          
+          // Create test case without API response
+          state.lastTestCase = {
+            timestamp: new Date().toISOString(),
+            elementName: state.elementName,
+            source: {
+              figmaData: JSON.parse(JSON.stringify(state.selectionData)),
+              tokens: state.tokens
+            },
+            preprocessorResult: preprocessingPayload.enabled ? {
+              draftSchema: preprocessingPayload.draftSchema,
+              meta: preprocessingPayload.meta
+            } : null,
+            request: {
+              type: state.sendAs,
+              elementName: state.elementName,
+              dataSize: strippedSize,
+              preprocessing: preprocessingPayload
+            },
+            response: null,
+            note: 'Saved without LLM response'
+          }
+          
+          console.log('📦 Test data captured:', state.lastTestCase.timestamp)
+        } catch (e) {
+          if (statusEl) statusEl.textContent = `⚠️ Error: ${e.message}`
+          setTimeout(() => { if (statusEl) statusEl.textContent = '' }, 3000)
+          return
+        }
+      }
+      
+      // Now save the test case (whether it was just created or already existed)
+      const safeName = (state.lastTestCase.elementName || 'test')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '_')
+        .substring(0, 30)
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19)
+      const filename = `testcase_${safeName}_${timestamp}.json`
+      
+      // Download as JSON file
+      const jsonString = JSON.stringify(state.lastTestCase, null, 2)
+      const blob = new Blob([jsonString], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      
+      // Show status based on whether we have LLM response
+      const hasLLMResponse = state.lastTestCase.response !== null
+      const statusMsg = hasLLMResponse 
+        ? `✓ Saved with LLM response as ${filename}`
+        : `✓ Saved (no LLM response yet) as ${filename}`
+      
+      if (statusEl) statusEl.textContent = statusMsg
+      if (btn) {
+        btn.textContent = '✓ Saved!'
+        setTimeout(() => {
+          btn.textContent = '💾 Save Test Data'
+          if (statusEl) statusEl.textContent = ''
+        }, 3000)
+      }
+    }
+
+    // Recursively strip large base64 data to reduce payload size
+    function stripBase64Data(node) {
+      if (!node || typeof node !== 'object') return node
+      
+      // Remove large preview image (can be 200-400KB), but keep thumbnail
+      if (node.previewUrl && node.previewUrl.startsWith('data:image/')) {
+        delete node.previewUrl
+      }
+      
+      // Keep thumbnailUrl - server needs this!
+      // Strip SVGs based on user setting
+      if (node.svg) {
+        if (state.stripAllSvg) {
+          // Strip all SVGs if setting is enabled
+          node.svg = '[SVG_STRIPPED_BY_USER_SETTING]'
+        } else if (node.svg.length > 20000) {
+          // Default: only strip SVGs larger than 20KB
+          node.svg = '[SVG_STRIPPED_FOR_SIZE]'
+        }
+      }
+      
+      // Recursively process children
+      if (Array.isArray(node.children)) {
+        node.children.forEach(child => stripBase64Data(child))
+      }
+      
+      return node
     }
 
     async function sendToBetterForms() {
@@ -166,23 +1277,125 @@
       renderSendOptions()
       clearFeedback()
       try {
-        // Clone the data and remove large previewUrl, keeping only small thumbnailUrl for server
+        // Clone and strip large base64 data to reduce payload size
+        const originalSize = JSON.stringify(state.selectionData).length
         const dataToSend = JSON.parse(JSON.stringify(state.selectionData))
-        if (dataToSend && dataToSend[0] && dataToSend[0].previewUrl) {
-          delete dataToSend[0].previewUrl
+        dataToSend.forEach(node => stripBase64Data(node))
+        const strippedSize = JSON.stringify(dataToSend).length
+        console.log('Payload optimization:', {
+          original: `${(originalSize / 1024).toFixed(1)}KB`,
+          stripped: `${(strippedSize / 1024).toFixed(1)}KB`,
+          reduction: `${((1 - strippedSize / originalSize) * 100).toFixed(1)}%`
+        })
+        
+        // Determine preprocessing mode
+        let preprocessMode = 'off'
+        if (state.preprocessing.enabled) {
+          preprocessMode = state.preprocessing.mode // 'auto', 'on', or 'off'
         }
         
-        const response = await fetch('https://appdev.fmbetterforms.com/api/v1/figma', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            apiKey: state.apiKey,
-            type: state.sendAs,
-            elementName: (state.selectionData && state.selectionData[0] && state.selectionData[0].name) ? state.selectionData[0].name : '',
-            data: dataToSend,
+        // Run preprocessing if enabled
+        let preprocessingPayload = {
+          enabled: false,
+          mode: 'off',
+          draftSchema: null,
+          meta: null
+        }
+        
+        if (preprocessMode !== 'off') {
+          const preprocessResult = await preprocessSelection(dataToSend, state.tokens, state.elementName)
+          
+          if (preprocessResult.success) {
+            // For 'auto' mode, use the recommended route
+            if (preprocessMode === 'auto' && preprocessResult.meta.recommendedRoute === 'raw') {
+              preprocessingPayload = {
+                enabled: false,
+                mode: 'off',
+                draftSchema: null,
+                meta: preprocessResult.meta
+              }
+              console.log('Auto mode: complexity too high, falling back to raw mode', preprocessResult.meta.complexityScore)
+            } else {
+              // For 'on' mode or 'auto' with low complexity, use draft schema
+              preprocessingPayload = {
+                enabled: true,
+                mode: preprocessMode,
+                draftSchema: preprocessResult.draftSchema,
+                meta: preprocessResult.meta
+              }
+              console.log('Preprocessing result:', preprocessResult.meta)
+            }
+          } else {
+            console.warn('Preprocessing failed, falling back to raw mode:', preprocessResult.error)
+            preprocessingPayload.enabled = false
+            preprocessingPayload.mode = 'off'
+          }
+        }
+        
+        // 🆕 CAPTURE TEST CASE BEFORE SENDING (so we have it even if API times out)
+        state.lastTestCase = {
+          timestamp: new Date().toISOString(),
+          elementName: state.elementName,
+          source: {
+            figmaData: JSON.parse(JSON.stringify(state.selectionData)), // original unstripped data
             tokens: state.tokens
-          })
+          },
+          preprocessorResult: preprocessingPayload.enabled ? {
+            draftSchema: preprocessingPayload.draftSchema,
+            meta: preprocessingPayload.meta
+          } : null,
+          request: {
+            type: state.sendAs,
+            elementName: state.elementName,
+            dataSize: strippedSize,
+            preprocessing: preprocessingPayload
+          },
+          response: null // Will be populated if API succeeds
+        }
+        console.log('📦 Test case captured (before API call):', state.lastTestCase.timestamp)
+        
+        const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        console.log('🚀 Sending to BetterForms [' + requestId + ']:', {
+          elementName: state.elementName,
+          type: state.sendAs,
+          preprocessing: preprocessingPayload,
+          dataSize: JSON.stringify(dataToSend).length
         })
+        
+        // Create an AbortController with 5-minute timeout for large LLM processing
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 300000) // 5 minutes (increased from 3)
+        
+        let response
+        try {
+          response = await fetch('https://appdev.fmbetterforms.com/api/v1/figma', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'X-Request-ID': requestId
+            },
+            body: JSON.stringify({
+              apiKey: state.apiKey,
+              type: state.sendAs,
+              elementName: state.elementName || '',
+              data: dataToSend,
+              tokens: state.tokens,
+              preprocessing: preprocessingPayload,
+              requestId: requestId
+            }),
+            signal: controller.signal
+          })
+          clearTimeout(timeoutId)
+          console.log('✅ Fetch completed [' + requestId + ']')
+        } catch (fetchError) {
+          clearTimeout(timeoutId)
+          console.error('❌ Fetch failed [' + requestId + ']:', fetchError)
+          if (fetchError.name === 'AbortError') {
+            throw new Error('Request timed out after 5 minutes. You can still save the test fixture with preprocessor data using "Save Test Case".')
+          }
+          throw fetchError
+        }
+        
         if (!response.ok) {
           let serverMsg = ''
           try {
@@ -198,6 +1411,7 @@
             if (status === 401) return 'Please check your API key.'
             if (status === 403) return 'You do not have permission to perform this action.'
             if (status === 404) return 'Endpoint not found. Please update the plugin or contact support.'
+            if (status === 413) return 'Selection is too large. Try selecting a smaller element or component.'
             if (status === 429) return 'Rate limit exceeded. Please wait and try again.'
             if (status === 422) return 'Validation failed. Ensure your selection is valid.'
             if (status >= 500) return 'The server encountered an error. Try again later.'
@@ -207,7 +1421,34 @@
           throw new Error(msg)
         }
         const result = await response.json()
-        showFeedback('Successfully sent to BetterForms!', 'success')
+        
+        console.log('BetterForms response:', result.meta || result)
+        
+        // 🆕 UPDATE test case with response (test case was already captured before API call)
+        if (state.lastTestCase) {
+          state.lastTestCase.response = result
+          console.log('✅ Test case updated with API response:', state.lastTestCase.timestamp)
+        }
+        
+        // Build success message with preprocessing info if available
+        let successMsg = 'Successfully sent to FM BetterForms!'
+        if (result.meta) {
+          const details = []
+          if (result.meta.preprocessingUsed) {
+            details.push('preprocessed')
+          }
+          if (result.meta.route) {
+            details.push(`${result.meta.route} route`)
+          }
+          if (result.meta.model) {
+            details.push(result.meta.model)
+          }
+          if (details.length > 0) {
+            successMsg += ` (${details.join(', ')})`
+          }
+        }
+        
+        showFeedback(successMsg, 'success')
       } catch (e) {
         showFeedback(`Failed to send: ${e.message}`, 'error')
       } finally {
@@ -339,6 +1580,7 @@
       const meta = document.getElementById('selMeta')
       const jsonEl = document.getElementById('json')
       const previewEl = document.getElementById('preview')
+      const elementNameInput = document.getElementById('elementName')
       clearFeedback()
       if (!Array.isArray(selection) || selection.length === 0) {
         if (meta) meta.textContent = 'No selection'
@@ -348,11 +1590,25 @@
         if (previewEl) {
           previewEl.innerHTML = '<div class="empty-state">Select a layer or object to preview</div>'
         }
+        if (elementNameInput) {
+          elementNameInput.value = ''
+          elementNameInput.parentElement.style.display = 'none'
+        }
+        state.elementName = ''
         renderSendButton()
         renderSendOptions()
         return
       }
       const first = selection[0]
+      
+      // Set element name from selection only if user hasn't modified it
+      if (!state.elementName || state.elementName === '') {
+        state.elementName = first.name || ''
+      }
+      if (elementNameInput) {
+        elementNameInput.value = state.elementName
+        elementNameInput.parentElement.style.display = 'flex'
+      }
       
       // Build metadata text with token count
       let metaText = `${selection.length} node(s): ${first.name} (${first.type})`
@@ -408,7 +1664,6 @@
             img.style.display = 'block'
             img.style.margin = 'auto'
             img.style.borderRadius = '4px'
-            img.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05)'
             previewEl.appendChild(img)
           } else {
             const p = document.createElement('div')
@@ -453,22 +1708,31 @@
     <div class="tabs">
       <button class="tab active" data-tab="preview" onclick="setActiveTab('preview')">Preview</button>
       <button class="tab" data-tab="json" onclick="setActiveTab('json')">JSON</button>
-      <button class="tab" data-tab="account" style="margin-left:auto" onclick="setActiveTab('account')">Account</button>
+      <button class="tab" data-tab="account" style="margin-left:auto" onclick="setActiveTab('account')">Settings</button>
     </div>
     <div class="tabpanes">
       <div class="tabpane active" data-tab="preview">
-        <div class="tabpane-content">
-          <div id="preview"></div>
+        <div class="tabpane-content" style="padding: 12px;">
+          <div style="width:100%; padding:0 0 8px 0; display:flex; gap:8px; align-items:center; justify-content:space-between;">
+            <input id="elementName" type="text" style="flex:1;" placeholder="Element name"  oninput="updateElementName(this.value)" />
+            <button class="ellipsis-btn" onclick="openExportModal()" title="Export settings" style="flex-shrink:0;">⋮</button>
+          </div>
+          <div id="preview" style="flex:1;"></div>
         </div>
-        <div class="tabpane-footer">
-          <div id="sendOptions" class="row inline" style="margin-bottom:8px; padding-bottom:6px;"></div>
+        <div class="tabpane-footer" style="position: sticky; bottom: 0; background: white; border-top: 1px solid #e5e7eb; padding: 8px 12px 12px;">
+          <div id="sendOptions" class="row inline" style="margin-bottom:8px; padding-bottom:6px; display:none;"></div>
           <button id="sendBtn" class="primary wide" onclick="sendToBetterForms()">Send to BetterForms</button>
           <div id="sendFeedback" class="feedback" style="display:none;"></div>
         </div>
       </div>
       <div class="tabpane" data-tab="json">
-        <div class="tabpane-content">
-          <div id="json" style="width: 100%; height: 100%;"></div>
+        <div class="tabpane-content" style="flex-direction:column;">
+          <div style="padding:8px; border-bottom:1px solid #e5e7eb; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <button onclick="runPreprocessorDebug()" style="font-size:11px;">🔬 Run Preprocessor Debug</button>
+            <button onclick="saveTestData()" style="font-size:11px;" id="saveTestDataBtn">💾 Save Test Data</button>
+            <span id="testCaseStatus" style="font-size:10px; color:#6b7280;"></span>
+          </div>
+          <div id="json" style="width: 100%; height: 100%; overflow:auto;"></div>
         </div>
       </div>
       <div class="tabpane" data-tab="account">
@@ -477,36 +1741,99 @@
             <div style="margin-bottom:16px;">
               <strong style="font-size:13px; display:block; margin-bottom:8px;">Connect to BetterForms</strong>
               <p class="small" style="margin:0 0 12px 0; line-height:1.5;">
-                To sync designs with BetterForms, you need an API key from your BetterForms account.
+                To sync designs with FM BetterForms, you'll need an API key from your BetterForms account.
               </p>
               <p class="small" style="margin:0 0 12px 0; line-height:1.5;">
                 <strong>How to get your API key:</strong><br>
-                1. Open the FileMaker BetterForms Editor<br>
+                1. Open the FM BetterForms Editor<br>
                 2. Go to <strong>Account / Users</strong> tab<br>
                 3. Copy your API key
               </p>
             </div>
             <div class="row inline" style="margin-bottom:8px;">
-              <label for="apiKey">API key</label>
-              <input id="apiKey" type="password" placeholder="Paste BF API key" />
+              <input id="apiKey" type="password" placeholder="Paste your BetterForms API key here" />
               <button class="primary" onclick="save()">Save</button>
             </div>
-            <div class="small" style="margin-top:8px;">Stored securely per‑user via clientStorage.</div>
+          
           </div>
           <div id="accountSaved" style="display:none;">
+            <strong style="font-size:13px; display:block; margin-bottom:8px;">Account</strong>
             <div style="padding:12px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:4px; margin-bottom:12px;">
               <div class="small" style="color:#065f46;">✓ API key connected</div>
             </div>
             <div class="row" style="justify-content:flex-end;">
-              <button id="logoutBtn" onclick="logout()">Logout</button>
+              <button id="logoutBtn" onclick="logout()">Disconnect</button>
             </div>
+          </div>
+          
+          <!-- Preprocessing Settings -->
+          <div style="margin-top:24px; padding-top:16px; border-top:1px solid #e5e7eb;">
+            <strong style="font-size:13px; display:block; margin-bottom:8px;">Preprocessing</strong>
+            <p class="small" style="margin:0 0 12px 0; line-height:1.5;">
+              Convert basic Figma properties locally before sending to AI. Reduces cost by ~60% and speeds up conversions.
+            </p>
+            
+            <label style="display:flex; align-items:center; gap:8px; margin-bottom:12px; cursor:pointer;">
+              <input type="checkbox" id="preprocessingEnabled" onchange="togglePreprocessingMode()" />
+              <span style="font-size:12px;">Enable JS Preprocessing</span>
+            </label>
+            
+            <div id="preprocessModeGroup" style="display:none; margin-left:24px;">
+              <div class="row" style="margin-bottom:8px; align-items:center;">
+                <label for="preprocessMode" style="width:60px; font-size:12px;">Mode:</label>
+                <select id="preprocessMode" onchange="savePreprocessingSettings()" style="flex:1; padding:4px 6px; border:1px solid #d1d5db; border-radius:4px; font-size:12px;">
+                  <option value="auto">Auto (recommended)</option>
+                  <option value="on">Always preprocess</option>
+                  <option value="off">Never preprocess</option>
+                </select>
+              </div>
+              <div class="small" style="margin-left:68px; color:#6b7280; line-height:1.4;">
+                <strong>Auto:</strong> Preprocess simple designs, skip complex ones<br>
+                <strong>Always:</strong> Force preprocessing (may reduce quality)<br>
+                <strong>Never:</strong> Send raw data (slower but highest quality)
+              </div>
+            </div>
+          </div>
+          
+          <!-- Version Info -->
+          <div style="margin-top:24px; padding-top:16px; border-top:1px solid #e5e7eb;">
+            <div class="small" id="versionFooter" style="color:#9ca3af;"></div>
           </div>
         </div>
       </div>
     </div>
   </div>
-  <div class="section" id="footer">
-    <div class="small" id="versionFooter"></div>
+  
+  <!-- Export Settings Modal -->
+  <div id="exportModal" class="modal-overlay" onclick="if(event.target === this) closeExportModal()">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">Export Settings</div>
+        <button class="modal-close" onclick="closeExportModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-setting">
+          <div class="modal-setting-label">
+            <strong>Outer Element 100% Width</strong>
+            <span class="small">Set the outermost element to 100% width so BetterForms can control sizing. When off, uses fixed pixel width from Figma.</span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="outerElementFullWidthToggle" onchange="toggleOuterElementFullWidth()" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="modal-setting">
+          <div class="modal-setting-label">
+            <strong>Strip All SVG Exports</strong>
+            <span class="small">Remove all SVG data from exports (not just >20KB). Reduces payload size but LLM won't have vector graphics data.</span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="stripAllSvgToggle" onchange="toggleStripAllSvg()">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+    </div>
   </div>
 </body>
 </html>

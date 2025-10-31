@@ -221,7 +221,7 @@ Complexity Scoring (0–100)
 
 Routing Matrix (examples)
 - pre → Claude 3.5 + "preprocessed" prompt (polish-only)
-- raw → GPT‑5/o1‑mini + full constraint prompt
+- raw → GPT‑5‑mini + full constraint prompt
 - Manual override: `preprocess:"on"|"off"`
 
 Diagnostics & Safety
@@ -232,6 +232,396 @@ Milestones
 - v0: Buttons/simple groups → scaffold + size + padding + bg + border
 - v1: Absolute/min-max/overflow/tokens
 - v2: Per-corner radii, child alignment overrides
+
+#### UI Preprocessing Controls
+
+**Settings Panel (Account Tab)**
+
+Add preprocessing toggle in the Account tab alongside API key settings:
+
+```html
+<div class="setting-group">
+  <label class="setting-label">
+    <input type="checkbox" id="preprocessingEnabled" />
+    <span>Enable JS Preprocessing (faster, cheaper)</span>
+  </label>
+  <div class="setting-description">
+    Converts basic Figma properties locally before sending to AI. 
+    Reduces cost by ~60% and speeds up simple conversions.
+  </div>
+</div>
+
+<div class="setting-group" id="preprocessModeGroup" style="display:none;">
+  <label for="preprocessMode">Preprocessing Mode:</label>
+  <select id="preprocessMode">
+    <option value="auto">Auto (recommended)</option>
+    <option value="on">Always preprocess</option>
+    <option value="off">Never preprocess</option>
+  </select>
+  <div class="setting-description">
+    • Auto: Preprocess simple designs, skip for complex ones
+    • Always: Force preprocessing (may reduce quality on complex designs)
+    • Never: Send raw data to AI (slower but highest quality)
+  </div>
+</div>
+```
+
+**State Management**
+
+```js
+let state = {
+  apiKey: '',
+  activeTab: 'preview',
+  selectionData: null,
+  tokens: null,
+  sending: false,
+  sendAs: 'element',
+  elementName: '',
+  preprocessing: {
+    enabled: false,
+    mode: 'auto' // 'auto' | 'on' | 'off'
+  }
+}
+
+// Load from clientStorage on init
+async function loadSettings() {
+  const apiKey = await figma.clientStorage.getAsync('bf.apiKey')
+  const preprocessEnabled = await figma.clientStorage.getAsync('bf.preprocessing.enabled')
+  const preprocessMode = await figma.clientStorage.getAsync('bf.preprocessing.mode')
+  
+  state.apiKey = apiKey || ''
+  state.preprocessing.enabled = preprocessEnabled !== false // default true
+  state.preprocessing.mode = preprocessMode || 'auto'
+  
+  updateUI()
+}
+
+// Save when changed
+async function savePreprocessingSetting() {
+  const enabled = document.getElementById('preprocessingEnabled').checked
+  const mode = document.getElementById('preprocessMode').value
+  
+  await figma.clientStorage.setAsync('bf.preprocessing.enabled', enabled)
+  await figma.clientStorage.setAsync('bf.preprocessing.mode', mode)
+  
+  state.preprocessing.enabled = enabled
+  state.preprocessing.mode = mode
+  
+  figma.notify('Preprocessing settings saved')
+}
+```
+
+**Visual Indicator**
+
+Show preprocessing status in the preview tab:
+
+```html
+<div id="preprocessingIndicator" class="preprocessing-badge" style="display:none;">
+  <svg width="12" height="12" viewBox="0 0 12 12">
+    <circle cx="6" cy="6" r="5" fill="#10b981"/>
+  </svg>
+  <span>Preprocessing enabled</span>
+</div>
+```
+
+**Send Button Logic**
+
+Determine preprocess flag based on settings:
+
+```js
+async function sendToBetterForms() {
+  // ... existing validation ...
+  
+  // Determine preprocessing mode
+  let preprocessFlag = 'off'
+  if (state.preprocessing.enabled) {
+    preprocessFlag = state.preprocessing.mode // 'auto', 'on', or 'off'
+  }
+  
+  // Run preprocessing if enabled and mode is 'on' or 'auto'
+  let processedData = state.selectionData
+  let draftSchema = null
+  let preprocessMeta = null
+  
+  if (preprocessFlag === 'on' || preprocessFlag === 'auto') {
+    const preprocessResult = await preprocessSelection(state.selectionData, state.tokens)
+    
+    if (preprocessResult.success) {
+      processedData = preprocessResult.normalizedData
+      draftSchema = preprocessResult.draftSchema
+      preprocessMeta = preprocessResult.meta
+      
+      // For 'auto' mode, check complexity score
+      if (preprocessFlag === 'auto' && preprocessMeta.complexityScore > 40) {
+        // Override to 'off' for complex designs
+        preprocessFlag = 'off'
+        processedData = state.selectionData // revert to raw
+        draftSchema = null
+        preprocessMeta = null
+      }
+    } else {
+      // Preprocessing failed, fall back to raw
+      preprocessFlag = 'off'
+      console.warn('Preprocessing failed, falling back to raw:', preprocessResult.error)
+    }
+  }
+  
+  const response = await fetch('https://appdev.fmbetterforms.com/api/v1/figma', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      apiKey: state.apiKey,
+      type: state.sendAs,
+      elementName: state.elementName || '',
+      data: processedData,
+      tokens: state.tokens,
+      preprocessing: {
+        enabled: preprocessFlag !== 'off',
+        mode: preprocessFlag,
+        draftSchema: draftSchema,
+        meta: preprocessMeta
+      }
+    })
+  })
+  
+  // ... rest of send logic ...
+}
+```
+
+#### Server Payload Structure (Enhanced)
+
+**Request Body Shape**
+
+```json
+{
+  "apiKey": "user_api_key_here",
+  "type": "element",
+  "elementName": "Button Primary",
+  "data": [ /* Figma node tree (raw or normalized) */ ],
+  "tokens": {
+    "all": { "primary-500": { "value": "#3b82f6" } },
+    "used": [ { "name": "primary-500", "value": "#3b82f6" } ]
+  },
+  "preprocessing": {
+    "enabled": true,
+    "mode": "auto",
+    "draftSchema": { /* Partial BF schema if preprocessed */ },
+    "meta": {
+      "version": "0.1.0",
+      "complexityScore": 23,
+      "metrics": {
+        "elementCount": 8,
+        "absoluteCount": 0,
+        "gradientsCount": 0,
+        "vectorsCount": 1,
+        "multiEffectsCount": 0,
+        "instancesCount": 0
+      },
+      "issues": [
+        "Vector icon found, placeholder generated"
+      ],
+      "recommendedRoute": "pre",
+      "processingTime": 45
+    }
+  }
+}
+```
+
+**Preprocessing Flag States**
+
+| enabled | mode | draftSchema | Server Behavior |
+|---------|------|-------------|-----------------|
+| `false` | N/A | `null` | Full LLM conversion (raw Figma → BF) |
+| `true` | `"off"` | `null` | Full LLM conversion (explicit override) |
+| `true` | `"auto"` | Present if score ≤ 40 | LLM polish (draft → final BF) |
+| `true` | `"auto"` | `null` if score > 40 | Full LLM conversion (complexity fallback) |
+| `true` | `"on"` | Always present | LLM polish (forced preprocessing) |
+
+**Server Response (Enhanced)**
+
+```json
+{
+  "success": true,
+  "schema": { /* Final BF schema */ },
+  "meta": {
+    "route": "preprocessed",
+    "model": "claude-3.5-sonnet",
+    "preprocessingUsed": true,
+    "inputComplexity": 23,
+    "tokensUsed": 1243,
+    "processingTime": 3200,
+    "cost": 0.03,
+    "warnings": []
+  }
+}
+```
+
+**Server Error Cases**
+
+```json
+{
+  "success": false,
+  "error": "Preprocessing failed: invalid draftSchema structure",
+  "fallbackAttempted": true,
+  "fallbackSuccess": false,
+  "meta": {
+    "route": "raw",
+    "preprocessingUsed": false,
+    "originalError": "Missing required field 'type' in draftSchema.fields[2]"
+  }
+}
+```
+
+#### Backend Routing Logic (Detailed)
+
+```ts
+// Server-side handler
+async function handleFigmaConversion(req, res) {
+  const { data, tokens, preprocessing } = req.body
+  
+  // Extract preprocessing info
+  const preprocessEnabled = preprocessing?.enabled ?? false
+  const preprocessMode = preprocessing?.mode ?? 'off'
+  const draftSchema = preprocessing?.draftSchema ?? null
+  const preprocessMeta = preprocessing?.meta ?? null
+  
+  let route = 'raw'
+  let prompt = 'full-conversion-prompt'
+  let model = 'gpt-4o-mini'
+  
+  // Determine routing
+  if (preprocessEnabled && preprocessMode !== 'off' && draftSchema) {
+    // Use preprocessed route
+    route = 'preprocessed'
+    prompt = 'polish-only-prompt'
+    model = 'claude-3.5-sonnet'
+    
+    // Validate draft schema
+    const validation = validateDraftSchema(draftSchema)
+    if (!validation.valid) {
+      // Fall back to raw route
+      console.warn('Invalid draft schema, falling back to raw route:', validation.errors)
+      route = 'raw'
+      prompt = 'full-conversion-prompt'
+      draftSchema = null
+    }
+  } else if (preprocessEnabled && preprocessMode === 'auto') {
+    // Auto mode without draft (complexity > threshold)
+    const complexity = preprocessMeta?.complexityScore ?? scoreComplexity(data)
+    if (complexity > 40) {
+      route = 'raw'
+      model = 'gpt-4o-mini' // or gpt-5 for very complex
+    }
+  }
+  
+  // Prepare LLM payload
+  const llmPayload = {
+    route,
+    model,
+    prompt,
+    data: draftSchema ? { draft: draftSchema, original: data } : data,
+    tokens,
+    meta: preprocessMeta
+  }
+  
+  // Call LLM
+  const result = await callLLM(llmPayload)
+  
+  // Return enhanced response
+  res.json({
+    success: true,
+    schema: result.schema,
+    meta: {
+      route,
+      model,
+      preprocessingUsed: route === 'preprocessed',
+      inputComplexity: preprocessMeta?.complexityScore,
+      tokensUsed: result.tokensUsed,
+      processingTime: result.processingTime,
+      cost: calculateCost(result.tokensUsed, model),
+      warnings: result.warnings || []
+    }
+  })
+}
+
+function scoreComplexity(data) {
+  // Flatten all nodes
+  const allNodes = flattenNodes(data)
+  
+  const metrics = {
+    elementCount: allNodes.length,
+    absoluteCount: allNodes.filter(n => n.constraints?.horizontal === 'ABSOLUTE').length,
+    gradientsCount: allNodes.filter(n => hasGradient(n.fills)).length,
+    vectorsCount: allNodes.filter(n => n.type === 'VECTOR').length,
+    multiEffectsCount: allNodes.filter(n => (n.effects?.length ?? 0) > 2).length,
+    instancesCount: allNodes.filter(n => n.type === 'INSTANCE').length
+  }
+  
+  // Weighted scoring
+  const score = 
+    metrics.elementCount * 0.5 +
+    metrics.absoluteCount * 2 +
+    metrics.gradientsCount * 3 +
+    metrics.vectorsCount * 1.5 +
+    metrics.multiEffectsCount * 2 +
+    metrics.instancesCount * 1
+  
+  return Math.min(100, Math.round(score))
+}
+```
+
+#### Prompt Templates
+
+**Full Conversion Prompt (raw route)**
+- Used when: preprocessing disabled or complexity > threshold
+- Input: Raw Figma data + tokens
+- Output: Complete BF schema
+- Model: GPT-4o-mini or GPT-5
+
+**Polish-Only Prompt (preprocessed route)**
+- Used when: preprocessing enabled and draft schema valid
+- Input: Draft BF schema + normalized Figma data + tokens
+- Output: Refined BF schema
+- Model: Claude 3.5 Sonnet
+
+```markdown
+You are refining a BetterForms schema that has been partially generated from Figma.
+
+INPUT:
+- draftSchema: Mechanical conversion of Figma properties (structure, layout, basic styles)
+- originalData: Normalized Figma node tree (reference only)
+- tokens: Available design tokens
+
+YOUR TASKS:
+1. Semantic improvements:
+   - Identify component types (buttons, inputs, cards, navigation)
+   - Add appropriate field types and properties
+   - Improve class names (use standard Tailwind over arbitrary values when possible)
+   - Detect icons and convert to proper format
+
+2. Validation & cleanup:
+   - Ensure all required BF properties are present
+   - Remove redundant or conflicting classes
+   - Fix any structural issues
+   - Add accessibility attributes where appropriate
+
+3. Preserve:
+   - All data-idbf attributes
+   - Original Figma names in comments
+   - Exact dimensions where specified
+   - Token references
+
+OUTPUT:
+Valid BetterForms schema JSON matching the contract.
+```
+
+**Cost Comparison**
+
+| Route | Preprocessing | Tokens In | Tokens Out | Model | Time | Cost |
+|-------|--------------|-----------|------------|-------|------|------|
+| Raw | No | ~8,000 | ~2,500 | GPT-4o-mini | 25s | $0.15 |
+| Preprocessed | Yes | ~2,500 | ~1,000 | Claude 3.5 | 8s | $0.03 |
+| **Savings** | | **-69%** | **-60%** | | **-68%** | **-80%** |
 
 ---
 

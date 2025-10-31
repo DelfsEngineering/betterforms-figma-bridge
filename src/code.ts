@@ -1,5 +1,5 @@
 // Show UI specified in manifest (ui.html)
-figma.showUI(__html__, { width: 420, height: 480 });
+figma.showUI(__html__, { width: 420, height: 490 });
 
 // ---------- Helpers for serialization (full-ish, safe, depth-limited) ----------
 function toHex(rgb: RGB): string {
@@ -37,7 +37,7 @@ function serializeEffects(effects: ReadonlyArray<Effect>): any[] {
 	});
 }
 
-function serializeNode(node: SceneNode, depth: number): any {
+async function serializeNode(node: SceneNode, depth: number): Promise<any> {
 	const out: any = {
 		id: node.id,
 		name: node.name,
@@ -58,6 +58,12 @@ function serializeNode(node: SceneNode, depth: number): any {
 	if ('constraints' in node) {
 		out.constraints = (node as any).constraints;
 	}
+
+	// Capture layout sizing for flex-grow detection
+	if ('layoutGrow' in (node as any)) out.layoutGrow = (node as any).layoutGrow;
+	if ('layoutAlign' in (node as any)) out.layoutAlign = (node as any).layoutAlign;
+	if ('layoutSizingHorizontal' in (node as any)) out.layoutSizingHorizontal = (node as any).layoutSizingHorizontal;
+	if ('layoutSizingVertical' in (node as any)) out.layoutSizingVertical = (node as any).layoutSizingVertical;
 
 	if ('layoutMode' in (node as any)) {
 		out.autolayout = {
@@ -106,6 +112,33 @@ function serializeNode(node: SceneNode, depth: number): any {
 		out.textStyle = textStyle;
 	}
 
+	// Export vectors and groups as SVG (will be used as type: "html" in BetterForms)
+	// GROUPs are better for complete icons (e.g., "ic_star")
+	// VECTORs only if they have visible fills
+	const shouldExportSvg = (
+		node.type === 'GROUP' || 
+		(node.type === 'VECTOR' && 'fills' in (node as any) && 
+		 Array.isArray((node as any).fills) && 
+		 (node as any).fills.length > 0)
+	);
+	
+	if (shouldExportSvg && 'exportAsync' in node) {
+		try {
+			const svgBytes = await (node as any).exportAsync({ 
+				format: 'SVG',
+				svgIdAttribute: true
+			});
+			// Convert Uint8Array to string without TextDecoder (not available in Figma sandbox)
+			let svgString = '';
+			for (let i = 0; i < svgBytes.length; i++) {
+				svgString += String.fromCharCode(svgBytes[i]);
+			}
+			out.svg = svgString;
+		} catch (e) {
+			console.warn('SVG export failed for:', node.name, e);
+		}
+	}
+
 	if ('cornerRadius' in (node as any)) {
 		const cr: any = (node as any).cornerRadius;
 		if (typeof cr === 'number') out.cornerRadius = cr;
@@ -121,7 +154,7 @@ function serializeNode(node: SceneNode, depth: number): any {
 
 	if (depth > 0 && 'children' in (node as any) && Array.isArray((node as any).children)) {
 		const kids = (node as any).children as ReadonlyArray<SceneNode>;
-		out.children = kids.slice(0, 200).map(c => serializeNode(c, depth - 1));
+		out.children = await Promise.all(kids.slice(0, 200).map(c => serializeNode(c, depth - 1)));
 	}
 
 	return out;
@@ -153,7 +186,7 @@ function uint8ToBase64(bytes: Uint8Array): string {
 
 async function postSelectionFull() {
     const sel = figma.currentPage.selection;
-    const data = sel.map(n => serializeNode(n, 6));
+    const data = await Promise.all(sel.map(n => serializeNode(n, 6)));
     if (sel[0]) {
         try {
             const node = sel[0];
@@ -209,9 +242,17 @@ async function postSelectionFull() {
 // On launch, load saved settings and send to UI
 (async () => {
     const savedApiKey = (await figma.clientStorage.getAsync('bf.apiKey')) || (await figma.clientStorage.getAsync('bf_apiKey'));
+    const preprocessEnabled = await figma.clientStorage.getAsync('bf.preprocessing.enabled');
+    const preprocessMode = await figma.clientStorage.getAsync('bf.preprocessing.mode');
+    const stripAllSvg = await figma.clientStorage.getAsync('bf.export.stripAllSvg');
+    const outerElementFullWidth = await figma.clientStorage.getAsync('bf.export.outerElementFullWidth');
 	figma.ui.postMessage({
 		type: 'init',
-		apiKey: savedApiKey || ''
+		apiKey: savedApiKey || '',
+		preprocessEnabled: preprocessEnabled !== false,
+		preprocessMode: preprocessMode || 'auto',
+		stripAllSvg: stripAllSvg === true,
+		outerElementFullWidth: outerElementFullWidth !== false
 	});
 	postSelectionFull();
 })();
@@ -225,19 +266,64 @@ figma.ui.onmessage = async (msg) => {
 		}
 		figma.notify('Settings saved');
         const savedApiKey = (await figma.clientStorage.getAsync('bf.apiKey')) || (await figma.clientStorage.getAsync('bf_apiKey'));
-        figma.ui.postMessage({ type: 'init', apiKey: savedApiKey || '' });
+        const preprocessEnabled = await figma.clientStorage.getAsync('bf.preprocessing.enabled');
+        const preprocessMode = await figma.clientStorage.getAsync('bf.preprocessing.mode');
+        const stripAllSvg = await figma.clientStorage.getAsync('bf.export.stripAllSvg');
+        const outerElementFullWidth = await figma.clientStorage.getAsync('bf.export.outerElementFullWidth');
+        figma.ui.postMessage({ 
+            type: 'init', 
+            apiKey: savedApiKey || '',
+            preprocessEnabled: preprocessEnabled !== false,
+            preprocessMode: preprocessMode || 'auto',
+            stripAllSvg: stripAllSvg === true,
+            outerElementFullWidth: outerElementFullWidth !== false
+        });
+		return;
+	}
+    if (msg && msg.type === 'save-preprocessing') {
+        await figma.clientStorage.setAsync('bf.preprocessing.enabled', msg.enabled);
+        await figma.clientStorage.setAsync('bf.preprocessing.mode', msg.mode);
+        figma.notify('Preprocessing settings saved');
+		return;
+	}
+    if (msg && msg.type === 'save-export-settings') {
+        await figma.clientStorage.setAsync('bf.export.stripAllSvg', msg.stripAllSvg);
+        await figma.clientStorage.setAsync('bf.export.outerElementFullWidth', msg.outerElementFullWidth);
+        figma.notify('Export settings saved');
 		return;
 	}
     if (msg && msg.type === 'logout') {
 		await figma.clientStorage.deleteAsync('bf.apiKey');
         await figma.clientStorage.deleteAsync('bf_apiKey');
 		figma.notify('Signed out');
-		figma.ui.postMessage({ type: 'init', apiKey: '' });
+        const preprocessEnabled = await figma.clientStorage.getAsync('bf.preprocessing.enabled');
+        const preprocessMode = await figma.clientStorage.getAsync('bf.preprocessing.mode');
+        const stripAllSvg = await figma.clientStorage.getAsync('bf.export.stripAllSvg');
+        const outerElementFullWidth = await figma.clientStorage.getAsync('bf.export.outerElementFullWidth');
+		figma.ui.postMessage({ 
+            type: 'init', 
+            apiKey: '',
+            preprocessEnabled: preprocessEnabled !== false,
+            preprocessMode: preprocessMode || 'auto',
+            stripAllSvg: stripAllSvg === true,
+            outerElementFullWidth: outerElementFullWidth !== false
+        });
 		return;
 	}
     if (msg && msg.type === 'ui-ready') {
         const savedApiKey = (await figma.clientStorage.getAsync('bf.apiKey')) || (await figma.clientStorage.getAsync('bf_apiKey'));
-        figma.ui.postMessage({ type: 'init', apiKey: savedApiKey || '' });
+        const preprocessEnabled = await figma.clientStorage.getAsync('bf.preprocessing.enabled');
+        const preprocessMode = await figma.clientStorage.getAsync('bf.preprocessing.mode');
+        const stripAllSvg = await figma.clientStorage.getAsync('bf.export.stripAllSvg');
+        const outerElementFullWidth = await figma.clientStorage.getAsync('bf.export.outerElementFullWidth');
+        figma.ui.postMessage({ 
+            type: 'init', 
+            apiKey: savedApiKey || '',
+            preprocessEnabled: preprocessEnabled !== false,
+            preprocessMode: preprocessMode || 'auto',
+            stripAllSvg: stripAllSvg === true,
+            outerElementFullWidth: outerElementFullWidth !== false
+        });
         await postSelectionFull();
         return;
     }

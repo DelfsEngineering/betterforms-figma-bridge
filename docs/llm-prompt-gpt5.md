@@ -14,6 +14,7 @@ Convert Figma design JSON to FileMaker BetterForms schema JSON that visually mat
 4. **Structure Preservation:** Maintain exact Figma hierarchy - preserve all frames even if seemingly redundant
 5. **Numeric Precision:** Round to 1-2 decimal places max (whole numbers preferred for font sizes)
 6. **BFName Required:** Every field must include a `BFName` property derived from `node.name` (lowercase_with_underscores)
+7. **Bottom Margin Reset:** BetterForms elements have default bottom margin - add `mb-0` to elements with NO bottom margin in Figma, skip `mb-0` if element already has bottom margin class
 
 ---
 
@@ -214,6 +215,13 @@ You will receive:
 
 **Overflow:**
 - `overflow.clips: true` + `direction: "VERTICAL"` → `overflow-y-auto`
+
+**Bottom Margin (BetterForms Default Behavior):**
+- BetterForms adds default bottom margin to all elements
+- If Figma element has NO bottom spacing (no margin, last in container, or `itemSpacing: 0` below it) → Add `mb-0` to reset default
+- If Figma element has bottom spacing (autolayout gap, explicit margin) → Use that margin value, don't add `mb-0`
+- Example: Element with `itemSpacing: 24` below it → use `mb-[24px]`, no `mb-0`
+- Example: Last element in container → use `mb-0` to remove default
 
 ### Type Detection
 
@@ -619,6 +627,7 @@ Your output must satisfy ALL of these:
 10. ✓ Empty arrays/objects omitted
 11. ✓ Numeric precision: 1-2 decimals max
 12. ✓ Form controls (switches, radios, checkboxes) are custom HTML (not native types)
+13. ✓ Bottom margin handled correctly: `mb-0` when Figma has no bottom spacing, omitted when bottom margin/gap exists
 
 ---
 

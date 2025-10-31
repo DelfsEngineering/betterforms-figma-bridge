@@ -61,6 +61,7 @@ Output is always a **single field object** that directly represents the selected
 - `size.w` + `primaryAxisSizingMode` → width classes (see Layout Mapping)
 - `strokes` → border classes
 - `effects` → shadow classes
+- **Bottom margin:** BetterForms adds default bottom margin to all elements - add `mb-0` to elements with NO bottom spacing in Figma, skip `mb-0` if element already has bottom margin class
 - DO NOT hardcode any values - derive everything from the Figma data
 
 ### BFName Property
@@ -413,6 +414,13 @@ Common use cases: badges, overlays, floating buttons
 - `overflow.direction: "BOTH"` + `overflow.clips: true` → `overflow-auto`
 - `overflow.clips: true` (no direction) → `overflow-hidden`
 - Use for scrollable containers, card bodies, etc.
+
+**Bottom Margin (BetterForms Default Behavior):**
+- BetterForms adds default bottom margin to all elements
+- If Figma element has NO bottom spacing (no margin, last in container, or `itemSpacing: 0` below it) → Add `mb-0` to reset default
+- If Figma element has bottom spacing (autolayout gap, explicit margin) → Use that margin value, don't add `mb-0`
+- Example: Element with `itemSpacing: 24` below it → use `mb-[24px]`, no `mb-0`
+- Example: Last element in container → use `mb-0` to remove default
 
 **🔥 Effects (Shadows & Blur):**
 
@@ -989,6 +997,7 @@ Before outputting, verify:
 11. ✓ Tokens prioritized: `tokens.used` first, then fuzzy match from `tokens.all`
 12. ✓ Every field includes a `BFName` property
 13. ✓ Form controls (switches, radios, checkboxes) generated as custom HTML (not native types)
+14. ✓ Bottom margin handled correctly: `mb-0` added when Figma has no bottom spacing, omitted when bottom margin/gap exists
 
 If validation fails, self-correct before returning JSON.
 
