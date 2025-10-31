@@ -208,8 +208,8 @@
     }
   </style>
   <script>
-    const VERSION = '0.6.67'
-    const BUILD = 67
+    const VERSION = '0.6.70'
+    const BUILD = 70
     let state = { 
       apiKey: '', 
       activeTab: 'preview', 
@@ -222,7 +222,7 @@
         enabled: true,
         mode: 'auto'
       },
-      stripAllSvg: false, // Strip all SVG exports, not just >20KB
+      stripAllSvg: false, // Strip all SVG exports, not just >30KB
       outerElementFullWidth: true, // Outer element uses 100% width (default ON)
       lastTestCase: null // Stores: { source, preprocessorResult, prompt, llmOutput, meta }
     }
@@ -992,21 +992,47 @@
 
     // ========== PREPROCESSOR DEBUG ==========
     
-    async function runPreprocessorDebug() {
-      const jsonEl = document.getElementById('json')
-      if (!jsonEl) return
+    function runPreprocessorDebug() {
+      console.log('🔬 Button clicked - Running preprocessor debug...')
       
-      if (!state.selectionData || state.selectionData.length === 0) {
-        jsonEl.innerHTML = '<div class="empty-state">No selection to preprocess</div>'
+      // Wrap in async IIFE to handle promises properly
+      (async () => {
+        try {
+          await runPreprocessorDebugAsync()
+        } catch (error) {
+          console.error('❌ Preprocessor debug failed:', error)
+          const jsonEl = document.getElementById('json')
+          if (jsonEl) {
+            jsonEl.innerHTML = `<div class="empty-state" style="color:#991b1b;">Error: ${error.message}<br><br>Check console for details.</div>`
+          }
+        }
+      })()
+    }
+    
+    async function runPreprocessorDebugAsync() {
+      console.log('🔬 Running preprocessor debug...')
+      const jsonEl = document.getElementById('json')
+      if (!jsonEl) {
+        console.error('JSON element not found')
         return
       }
+      
+      if (!state.selectionData || state.selectionData.length === 0) {
+        console.warn('No selection data available')
+        jsonEl.innerHTML = '<div class="empty-state">No selection to preprocess. Select a layer in Figma first.</div>'
+        return
+      }
+      
+      console.log('Selection data found:', state.selectionData.length, 'nodes')
       
       // Show loading state
       jsonEl.innerHTML = '<div class="empty-state">Running preprocessor...</div>'
       
       try {
         // Run preprocessor
+        console.log('Calling preprocessSelection...')
         const result = await preprocessSelection(state.selectionData, state.tokens, state.elementName)
+        console.log('Preprocessor result:', result)
         
         // Create debug output
         const debugOutput = {
@@ -1249,8 +1275,8 @@
         if (state.stripAllSvg) {
           // Strip all SVGs if setting is enabled
           node.svg = '[SVG_STRIPPED_BY_USER_SETTING]'
-        } else if (node.svg.length > 20000) {
-          // Default: only strip SVGs larger than 20KB
+        } else if (node.svg.length > 30000) {
+          // Default: only strip SVGs larger than 30KB
           node.svg = '[SVG_STRIPPED_FOR_SIZE]'
         }
       }
@@ -1825,7 +1851,7 @@
         <div class="modal-setting">
           <div class="modal-setting-label">
             <strong>Strip All SVG Exports</strong>
-            <span class="small">Remove all SVG data from exports (not just >20KB). Reduces payload size but LLM won't have vector graphics data.</span>
+            <span class="small">Remove all SVG data from exports (not just >30KB). Reduces payload size but LLM won't have vector graphics data.</span>
           </div>
           <label class="toggle-switch">
             <input type="checkbox" id="stripAllSvgToggle" onchange="toggleStripAllSvg()">

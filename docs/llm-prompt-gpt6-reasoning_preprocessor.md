@@ -95,21 +95,26 @@ Use for text, images, SVG graphics, shapes, custom form controls - anything not 
 
 ### `type: "button"` - Interactive Buttons
 
-**Required properties:** `text` (or `icon`), `buttonClasses`, `actions` array
+**Required properties:** `text` (or `icon`), `buttonClasses`, `actions`, `styleClasses: "mb-0"`
+
+**🚨 IMPORTANT:** Margin must go in `styleClasses`, NOT in `buttonClasses`!
 
 ```json
 {
   "type": "button",
   "text": "Submit",
-  "buttonClasses": "px-4 py-2 bg-blue-600 text-white rounded mb-0",
+  "buttonClasses": "px-4 py-2 bg-blue-600 text-white rounded",  // Visual styling only
   "actions": [],
-  "styleClasses": "",
+  "styleClasses": "mb-0",  // ✅ Margin goes here!
   "attributes": {"formElement": {"data-idbf": "idbf_e_60_126"}},
   "BFName": "submit_button"
 }
 ```
 
-**Icon buttons:** Use `"icon": "fa-regular fa-edit"`, `"text": ""`, `actions: []`
+**Icon button:**
+```json
+{"type": "button", "icon": "fa-regular fa-edit", "text": "", "actions": [], "buttonClasses": "p-[4px] w-[28px] h-[28px] rounded text-[#0c4a6e]", "styleClasses": "mb-0"}
+```
 
 ### `type: "input"` / `type: "textArea"` - Form Inputs
 **Use sparingly.** Only for simple text inputs. For checkboxes, radios, toggles → use `type: "html"` with custom markup.
@@ -349,8 +354,23 @@ Apply these even if not flagged as issues:
 - Icon buttons → add `aria-label`
 - Maintain heading hierarchy
 
-**Button detection:**
-If a group looks like a button (solid fill, padding, single text child), convert to `type: "button"`.
+**Button detection and flattening:**
+
+When you see nested groups that are clearly buttons, **flatten them to `type: "button"`**:
+
+```json
+// Before (nested icon button groups from preprocessor):
+{"type": "group", "BFName": "icon_button_edit", "fields": [
+  {"type": "group", "fields": [
+    {"html": "<i class=\"fa-regular fa-edit\"></i>"}
+  ]}
+]}
+
+// After (flattened to button):
+{"type": "button", "icon": "fa-regular fa-edit", "text": "", "actions": [], "buttonClasses": "p-[4px] w-[28px] h-[28px] rounded text-[#0c4a6e]", "styleClasses": "mb-0"}
+```
+
+**Extract the icon from nested HTML and move styling to buttonClasses.**
 
 </fix_patterns>
 
