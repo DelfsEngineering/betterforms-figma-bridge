@@ -65,6 +65,67 @@ async function serializeNode(node: SceneNode, depth: number): Promise<any> {
 	if ('layoutSizingHorizontal' in (node as any)) out.layoutSizingHorizontal = (node as any).layoutSizingHorizontal;
 	if ('layoutSizingVertical' in (node as any)) out.layoutSizingVertical = (node as any).layoutSizingVertical;
 
+	// Capture component variant properties (for interactive states)
+	if (node.type === 'INSTANCE') {
+		const instanceNode = node as InstanceNode;
+		
+		// Get component properties (variant selections like State=Hover, Type=Primary)
+		if ('componentProperties' in instanceNode && instanceNode.componentProperties) {
+			out.componentProperties = {};
+			
+			// Filter for interactive state properties only (not design system configs like padding/scale)
+			const interactiveStateKeys = ['state', 'hover', 'active', 'disabled', 'toggle', 'pressed', 'selected', 'focus'];
+			
+			for (const [propName, propValue] of Object.entries(instanceNode.componentProperties)) {
+				const keyLower = propName.toLowerCase();
+				const isInteractiveState = interactiveStateKeys.some(stateKey => keyLower.includes(stateKey));
+				
+				if (isInteractiveState) {
+					out.componentProperties[propName] = {
+						type: propValue.type,
+						value: propValue.value
+					};
+				}
+			}
+		}
+		
+		// Only capture variant combinations if there are interactive state properties
+		if (out.componentProperties && Object.keys(out.componentProperties).length > 0) {
+			const mainComponent = instanceNode.mainComponent;
+			if (mainComponent && 'parent' in mainComponent && mainComponent.parent?.type === 'COMPONENT_SET') {
+				const componentSet = mainComponent.parent as ComponentSetNode;
+				out.componentSetName = componentSet.name;
+				
+				// Get unique combinations of ONLY interactive state properties
+				const stateVariants = new Set<string>();
+				
+				for (const variant of componentSet.children) {
+					if (variant.type === 'COMPONENT') {
+						const componentVariant = variant as ComponentNode;
+						if ('variantProperties' in componentVariant && componentVariant.variantProperties) {
+							// Extract only interactive state properties
+							const stateProps: any = {};
+							for (const [key, value] of Object.entries(componentVariant.variantProperties)) {
+								if (out.componentProperties[key]) {
+									stateProps[key] = value;
+								}
+							}
+							
+							// Create a stable key for this state combination
+							const stateKey = JSON.stringify(stateProps);
+							if (!stateVariants.has(stateKey)) {
+								stateVariants.add(stateKey);
+							}
+						}
+					}
+				}
+				
+				// Convert back to array format
+				out.availableVariants = Array.from(stateVariants).map(key => JSON.parse(key));
+			}
+		}
+	}
+
 	if ('layoutMode' in (node as any)) {
 		out.autolayout = {
 			direction: (node as any).layoutMode,
@@ -246,13 +307,17 @@ async function postSelectionFull() {
     const preprocessMode = await figma.clientStorage.getAsync('bf.preprocessing.mode');
     const stripAllSvg = await figma.clientStorage.getAsync('bf.export.stripAllSvg');
     const outerElementFullWidth = await figma.clientStorage.getAsync('bf.export.outerElementFullWidth');
+    const stripRedundantChildFills = await figma.clientStorage.getAsync('bf.export.stripRedundantChildFills');
+    const applyOverflowHidden = await figma.clientStorage.getAsync('bf.export.applyOverflowHidden');
 	figma.ui.postMessage({
 		type: 'init',
 		apiKey: savedApiKey || '',
 		preprocessEnabled: preprocessEnabled !== false,
 		preprocessMode: preprocessMode || 'auto',
 		stripAllSvg: stripAllSvg === true,
-		outerElementFullWidth: outerElementFullWidth !== false
+		outerElementFullWidth: outerElementFullWidth !== false,
+		stripRedundantChildFills: stripRedundantChildFills !== false,
+		applyOverflowHidden: applyOverflowHidden !== false
 	});
 	postSelectionFull();
 })();
@@ -270,13 +335,17 @@ figma.ui.onmessage = async (msg) => {
         const preprocessMode = await figma.clientStorage.getAsync('bf.preprocessing.mode');
         const stripAllSvg = await figma.clientStorage.getAsync('bf.export.stripAllSvg');
         const outerElementFullWidth = await figma.clientStorage.getAsync('bf.export.outerElementFullWidth');
+        const stripRedundantChildFills = await figma.clientStorage.getAsync('bf.export.stripRedundantChildFills');
+        const applyOverflowHidden = await figma.clientStorage.getAsync('bf.export.applyOverflowHidden');
         figma.ui.postMessage({ 
             type: 'init', 
             apiKey: savedApiKey || '',
             preprocessEnabled: preprocessEnabled !== false,
             preprocessMode: preprocessMode || 'auto',
             stripAllSvg: stripAllSvg === true,
-            outerElementFullWidth: outerElementFullWidth !== false
+            outerElementFullWidth: outerElementFullWidth !== false,
+            stripRedundantChildFills: stripRedundantChildFills !== false,
+            applyOverflowHidden: applyOverflowHidden !== false
         });
 		return;
 	}
@@ -289,6 +358,8 @@ figma.ui.onmessage = async (msg) => {
     if (msg && msg.type === 'save-export-settings') {
         await figma.clientStorage.setAsync('bf.export.stripAllSvg', msg.stripAllSvg);
         await figma.clientStorage.setAsync('bf.export.outerElementFullWidth', msg.outerElementFullWidth);
+        await figma.clientStorage.setAsync('bf.export.stripRedundantChildFills', msg.stripRedundantChildFills);
+        await figma.clientStorage.setAsync('bf.export.applyOverflowHidden', msg.applyOverflowHidden);
         figma.notify('Export settings saved');
 		return;
 	}
@@ -300,13 +371,17 @@ figma.ui.onmessage = async (msg) => {
         const preprocessMode = await figma.clientStorage.getAsync('bf.preprocessing.mode');
         const stripAllSvg = await figma.clientStorage.getAsync('bf.export.stripAllSvg');
         const outerElementFullWidth = await figma.clientStorage.getAsync('bf.export.outerElementFullWidth');
+        const stripRedundantChildFills = await figma.clientStorage.getAsync('bf.export.stripRedundantChildFills');
+        const applyOverflowHidden = await figma.clientStorage.getAsync('bf.export.applyOverflowHidden');
 		figma.ui.postMessage({ 
             type: 'init', 
             apiKey: '',
             preprocessEnabled: preprocessEnabled !== false,
             preprocessMode: preprocessMode || 'auto',
             stripAllSvg: stripAllSvg === true,
-            outerElementFullWidth: outerElementFullWidth !== false
+            outerElementFullWidth: outerElementFullWidth !== false,
+            stripRedundantChildFills: stripRedundantChildFills !== false,
+            applyOverflowHidden: applyOverflowHidden !== false
         });
 		return;
 	}
@@ -316,13 +391,17 @@ figma.ui.onmessage = async (msg) => {
         const preprocessMode = await figma.clientStorage.getAsync('bf.preprocessing.mode');
         const stripAllSvg = await figma.clientStorage.getAsync('bf.export.stripAllSvg');
         const outerElementFullWidth = await figma.clientStorage.getAsync('bf.export.outerElementFullWidth');
+        const stripRedundantChildFills = await figma.clientStorage.getAsync('bf.export.stripRedundantChildFills');
+        const applyOverflowHidden = await figma.clientStorage.getAsync('bf.export.applyOverflowHidden');
         figma.ui.postMessage({ 
             type: 'init', 
             apiKey: savedApiKey || '',
             preprocessEnabled: preprocessEnabled !== false,
             preprocessMode: preprocessMode || 'auto',
             stripAllSvg: stripAllSvg === true,
-            outerElementFullWidth: outerElementFullWidth !== false
+            outerElementFullWidth: outerElementFullWidth !== false,
+            stripRedundantChildFills: stripRedundantChildFills !== false,
+            applyOverflowHidden: applyOverflowHidden !== false
         });
         await postSelectionFull();
         return;

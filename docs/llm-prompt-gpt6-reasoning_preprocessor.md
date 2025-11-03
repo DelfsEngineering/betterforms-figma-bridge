@@ -334,6 +334,37 @@ Extract gradient from Figma `fills` array and convert to CSS:
 
 ---
 
+### Issue Type 5: Component Variants (Interactive States)
+
+**Pattern:** `"Component '[Name]' has X variants - LLM should convert to hover/active/disabled states"`
+
+**Cause:** Figma component has multiple variants (e.g., State=Default/Hover/Active/Disabled)
+
+**What's available:** Check Figma data for `componentProperties` (current state) and `availableVariants` (all states)
+
+**Resolution:** Extract styling differences between variants and apply as CSS states:
+
+```json
+// Figma data shows:
+// Current: {componentProperties: {State: {value: "Default"}}}
+// Available: [{properties: {State: "Default"}}, {properties: {State: "Hover"}}, ...]
+// Compare fills/styles between variants to detect changes
+
+// Convert to button with state styling:
+{
+  "type": "button",
+  "buttonClasses": "px-4 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 rounded",
+  "text": "Submit"
+}
+```
+
+**Common patterns:**
+- Hover: Darker/lighter background, border changes
+- Active: Even darker, maybe inset shadow
+- Disabled: Reduced opacity, grayed out
+
+---
+
 ### Enhancement: Semantic Improvements
 
 Apply these even if not flagged as issues:

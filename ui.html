@@ -208,8 +208,8 @@
     }
   </style>
   <script>
-    const VERSION = '0.6.70'
-    const BUILD = 70
+    const VERSION = '0.6.79'
+    const BUILD = 79
     let state = { 
       apiKey: '', 
       activeTab: 'preview', 
@@ -224,6 +224,8 @@
       },
       stripAllSvg: false, // Strip all SVG exports, not just >30KB
       outerElementFullWidth: true, // Outer element uses 100% width (default ON)
+      stripRedundantChildFills: true, // Strip child backgrounds that match parent (default ON)
+      applyOverflowHidden: true, // Add overflow-hidden to rounded containers (default ON)
       lastTestCase: null // Stores: { source, preprocessorResult, prompt, llmOutput, meta }
     }
 
@@ -239,7 +241,7 @@
         // Load preprocessing settings
         loadPreprocessingSettings(msg.preprocessEnabled, msg.preprocessMode)
         // Load export settings
-        loadExportSettings(msg.stripAllSvg, msg.outerElementFullWidth)
+        loadExportSettings(msg.stripAllSvg, msg.outerElementFullWidth, msg.stripRedundantChildFills, msg.applyOverflowHidden)
         // Switch to account tab if no API key
         if (!state.apiKey) {
           setActiveTab('account')
@@ -333,15 +335,23 @@
       if (modeGroup) modeGroup.style.display = state.preprocessing.enabled ? 'block' : 'none'
     }
 
-    function loadExportSettings(stripAllSvg, outerElementFullWidth) {
+    function loadExportSettings(stripAllSvg, outerElementFullWidth, stripRedundantChildFills, applyOverflowHidden) {
       state.stripAllSvg = stripAllSvg === true
       state.outerElementFullWidth = outerElementFullWidth !== false // Default to true
+      state.stripRedundantChildFills = stripRedundantChildFills !== false // Default to true
+      state.applyOverflowHidden = applyOverflowHidden !== false // Default to true
       
       const stripSvgCheckbox = document.getElementById('stripAllSvgToggle')
       if (stripSvgCheckbox) stripSvgCheckbox.checked = state.stripAllSvg
       
       const fullWidthCheckbox = document.getElementById('outerElementFullWidthToggle')
       if (fullWidthCheckbox) fullWidthCheckbox.checked = state.outerElementFullWidth
+      
+      const stripBgCheckbox = document.getElementById('stripRedundantChildFillsToggle')
+      if (stripBgCheckbox) stripBgCheckbox.checked = state.stripRedundantChildFills
+      
+      const overflowCheckbox = document.getElementById('applyOverflowHiddenToggle')
+      if (overflowCheckbox) overflowCheckbox.checked = state.applyOverflowHidden
     }
 
     function openExportModal() {
@@ -366,12 +376,26 @@
       saveExportSettings()
     }
 
+    function toggleStripRedundantChildFills() {
+      const checkbox = document.getElementById('stripRedundantChildFillsToggle')
+      state.stripRedundantChildFills = checkbox.checked
+      saveExportSettings()
+    }
+
+    function toggleApplyOverflowHidden() {
+      const checkbox = document.getElementById('applyOverflowHiddenToggle')
+      state.applyOverflowHidden = checkbox.checked
+      saveExportSettings()
+    }
+
     function saveExportSettings() {
       parent.postMessage({ 
         pluginMessage: { 
           type: 'save-export-settings', 
           stripAllSvg: state.stripAllSvg,
-          outerElementFullWidth: state.outerElementFullWidth
+          outerElementFullWidth: state.outerElementFullWidth,
+          stripRedundantChildFills: state.stripRedundantChildFills,
+          applyOverflowHidden: state.applyOverflowHidden
         } 
       }, '*')
     }
@@ -407,6 +431,9 @@
         const metrics = calculateComplexityMetrics(allNodes)
         const complexityScore = calculateComplexityScore(metrics)
         
+        // Count SVGs before we potentially strip them
+        const svgInfo = countSvgs(selectionData)
+        
         // Always generate draft schema - let the caller decide whether to use it
         const issues = []
         const draftSchema = generateDraftSchema(selectionData, tokens, issues, elementName)
@@ -419,6 +446,40 @@
         
         const processingTime = Date.now() - startTime
         
+        // Estimate token count for FULL payload (Figma JSON + draft schema)
+        // This is what actually gets sent to the LLM
+        const figmaTokens = estimateTokenCount(normalizedData)
+        const schemaTokens = draftSchema ? estimateTokenCount(draftSchema) : 0
+        const estimatedTokens = figmaTokens + schemaTokens
+        
+        // Token warning logic
+        // Warn at 75K data tokens (prompt ~35K + data ~75K + output ~25K ≈ 135K, safe from 150K cap)
+        let tokenWarning = null
+        if (estimatedTokens > 75000) {
+          tokenWarning = {
+            level: 'high',
+            estimatedTokens,
+            figmaTokens,
+            schemaTokens,
+            message: 'Selection is very large and may exceed context limits',
+            suggestions: []
+          }
+          
+          // Suggest SVG stripping if SVGs are contributing significantly
+          if (svgInfo.count > 0 && svgInfo.totalSize > 10000) {
+            const svgTokens = Math.round(svgInfo.totalSize / 3.5)
+            tokenWarning.suggestions.push({
+              action: 'strip_svg',
+              description: `${svgInfo.count} SVG(s) detected (~${svgTokens.toLocaleString()} tokens). Enable "Strip All SVG Exports" in settings to reduce size.`
+            })
+          }
+          
+          tokenWarning.suggestions.push({
+            action: 'split',
+            description: 'Consider exporting this design in smaller parts for best results.'
+          })
+        }
+        
         return {
           success: true,
           normalizedData,
@@ -429,7 +490,10 @@
             metrics,
             issues,
             recommendedRoute,
-            processingTime
+            processingTime,
+            estimatedTokens,
+            svgInfo,
+            tokenWarning
           }
         }
       } catch (error) {
@@ -514,6 +578,40 @@
       
       return Math.min(100, Math.round(score))
     }
+    
+    /**
+     * Estimate token count for data
+     * Rough estimate: 1 token ≈ 3.5 characters for JSON
+     */
+    function estimateTokenCount(data) {
+      const jsonStr = JSON.stringify(data)
+      return Math.round(jsonStr.length / 3.5)
+    }
+    
+    /**
+     * Count SVGs in node tree
+     */
+    function countSvgs(nodes) {
+      let count = 0
+      let totalSize = 0
+      
+      function walk(node) {
+        if (!node) return
+        if (node.svg && typeof node.svg === 'string') {
+          count++
+          totalSize += node.svg.length
+        }
+        if (Array.isArray(node.children)) {
+          node.children.forEach(walk)
+        }
+      }
+      
+      if (Array.isArray(nodes)) {
+        nodes.forEach(walk)
+      }
+      
+      return { count, totalSize }
+    }
 
     function normalizeData(data) {
       // For now, just return a deep clone
@@ -536,18 +634,174 @@
         rootFields[0].BFName = bfName
       }
       
-      // Generate BetterForms schema
-      const schema = {
-        pages: [{
-          schema: {
-            fields: rootFields
-          }
-        }],
-        model: {},
-        options: {}
+      const schema = rootFields[0] || null
+      
+      // Strip redundant child backgrounds if enabled
+      if (state.stripRedundantChildFills && schema) {
+        const strippedCount = stripRedundantBackgrounds(schema, null)
+        if (strippedCount > 0) {
+          issues.push(`Stripped ${strippedCount} redundant background(s) matching parent`)
+        }
       }
       
+      // Apply overflow-hidden to rounded containers if enabled
+      if (state.applyOverflowHidden && schema) {
+        const appliedCount = applyOverflowHiddenToRounded(schema)
+        if (appliedCount > 0) {
+          issues.push(`Applied overflow-hidden to ${appliedCount} rounded container(s)`)
+        }
+      }
+      
+      // Return just the single root element (always one selection)
       return schema
+    }
+    
+    // ========== STRIP REDUNDANT BACKGROUNDS ==========
+    
+    /**
+     * Extract background color from styleClasses string
+     * Returns null if no background found
+     */
+    function extractBackground(styleClasses) {
+      if (!styleClasses || typeof styleClasses !== 'string') return null
+      
+      // Match bg- classes: bg-white, bg-red-600, bg-[#fff], bg-[var(--color)]
+      const bgMatch = styleClasses.match(/bg-(\[[^\]]+\]|[\w-]+(?:\/\d+)?)/);
+      if (!bgMatch) return null
+      
+      return bgMatch[0] // Return full match (e.g., "bg-white" or "bg-[#fff]")
+    }
+    
+    /**
+     * Normalize hex colors for comparison
+     * #fff -> #ffffff, #FFF -> #ffffff
+     */
+    function normalizeHexColor(hexStr) {
+      if (!hexStr) return null
+      
+      // Extract hex value from bg-[#...] format
+      const hexMatch = hexStr.match(/#([0-9a-fA-F]+)/);
+      if (!hexMatch) return hexStr // Not a hex color, return as-is
+      
+      let hex = hexMatch[1].toLowerCase()
+      
+      // Expand short hex: fff -> ffffff
+      if (hex.length === 3) {
+        hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2]
+      }
+      
+      return `bg-[#${hex}]`
+    }
+    
+    /**
+     * Check if two background colors match
+     * Handles: Tailwind classes, hex colors (with normalization), tokens, opacity
+     */
+    function backgroundsMatch(bg1, bg2) {
+      if (!bg1 || !bg2) return false
+      if (bg1 === bg2) return true // Exact match
+      
+      // Normalize hex colors for comparison
+      const norm1 = normalizeHexColor(bg1)
+      const norm2 = normalizeHexColor(bg2)
+      
+      return norm1 === norm2
+    }
+    
+    /**
+     * Remove background from styleClasses string
+     */
+    function removeBackground(styleClasses, bgToRemove) {
+      if (!styleClasses || !bgToRemove) return styleClasses
+      
+      // Remove the background class and clean up extra spaces
+      return styleClasses
+        .replace(bgToRemove, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+    }
+    
+    /**
+     * Recursively strip redundant backgrounds from schema tree
+     * Returns count of backgrounds stripped
+     */
+    function stripRedundantBackgrounds(field, parentBg) {
+      if (!field) return 0
+      
+      let count = 0
+      
+      // Extract background from current field
+      const currentBg = extractBackground(field.styleClasses)
+      
+      // If this field's background matches parent's, remove it
+      if (parentBg && currentBg && backgroundsMatch(currentBg, parentBg)) {
+        field.styleClasses = removeBackground(field.styleClasses, currentBg)
+        count++
+      }
+      
+      // Recurse into children with THIS field's background (or parent's if none)
+      if (field.fields && Array.isArray(field.fields)) {
+        const bgForChildren = currentBg || parentBg
+        for (const child of field.fields) {
+          count += stripRedundantBackgrounds(child, bgForChildren)
+        }
+      }
+      
+      return count
+    }
+    
+    // ========== APPLY OVERFLOW HIDDEN ==========
+    
+    /**
+     * Check if element has rounded corners
+     */
+    function hasRoundedCorners(styleClasses) {
+      if (!styleClasses || typeof styleClasses !== 'string') return false
+      
+      // Match: rounded, rounded-md, rounded-lg, rounded-xl, rounded-2xl, rounded-full, rounded-[Npx]
+      return /rounded(?:-\w+|-\[\d+px\])?/.test(styleClasses)
+    }
+    
+    /**
+     * Check if element already has overflow class
+     */
+    function hasOverflowClass(styleClasses) {
+      if (!styleClasses || typeof styleClasses !== 'string') return false
+      return /overflow-(?:hidden|auto|scroll|visible|clip)/.test(styleClasses)
+    }
+    
+    /**
+     * Recursively apply overflow-hidden to rounded containers with children
+     * Returns count of elements modified
+     */
+    function applyOverflowHiddenToRounded(field) {
+      if (!field) return 0
+      
+      let count = 0
+      
+      // Check if this is a group/container with rounded corners and children
+      const isGroup = field.type === 'group' || field.fields
+      const hasChildren = field.fields && Array.isArray(field.fields) && field.fields.length > 0
+      const isRounded = hasRoundedCorners(field.styleClasses)
+      const hasOverflow = hasOverflowClass(field.styleClasses)
+      
+      // Add overflow-hidden if:
+      // - It's a container with children
+      // - Has rounded corners
+      // - Doesn't already have an overflow class
+      if (isGroup && hasChildren && isRounded && !hasOverflow) {
+        field.styleClasses = (field.styleClasses + ' overflow-hidden').trim()
+        count++
+      }
+      
+      // Recurse into children
+      if (field.fields && Array.isArray(field.fields)) {
+        for (const child of field.fields) {
+          count += applyOverflowHiddenToRounded(child)
+        }
+      }
+      
+      return count
     }
 
     function processNodeToFields(node, tokens, issues, isRootNode = false) {
@@ -623,6 +877,19 @@
     }
 
     function processContainerNode(node, tokens, issues, isRootNode = false) {
+      // Flag components with variants for LLM to handle state styling
+      if ((node.type === 'INSTANCE' || node.type === 'COMPONENT') && node.availableVariants && node.availableVariants.length > 1) {
+        const stateProps = node.componentProperties || {}
+        const hasStateVariant = Object.keys(stateProps).some(prop => 
+          prop.toLowerCase().includes('state') || 
+          prop.toLowerCase().includes('hover') || 
+          prop.toLowerCase().includes('active')
+        )
+        if (hasStateVariant || node.availableVariants.length > 1) {
+          issues.push(`Component "${node.name}" has ${node.availableVariants.length} variants - LLM should convert to hover/active/disabled states`)
+        }
+      }
+      
       // Check if this GROUP has SVG export (e.g., icon groups like "ic_star")
       // BUT: Only use SVG if children are simple (vectors, not frames/components)
       if (node.type === 'GROUP' && node.svg) {
@@ -990,160 +1257,37 @@
       return color1 === color2
     }
 
-    // ========== PREPROCESSOR DEBUG ==========
+    // ========== PREPROCESSOR TEST VIEW ==========
     
-    function runPreprocessorDebug() {
-      console.log('🔬 Button clicked - Running preprocessor debug...')
-      
-      // Wrap in async IIFE to handle promises properly
-      (async () => {
-        try {
-          await runPreprocessorDebugAsync()
-        } catch (error) {
-          console.error('❌ Preprocessor debug failed:', error)
-          const jsonEl = document.getElementById('json')
-          if (jsonEl) {
-            jsonEl.innerHTML = `<div class="empty-state" style="color:#991b1b;">Error: ${error.message}<br><br>Check console for details.</div>`
-          }
-        }
-      })()
-    }
-    
-    async function runPreprocessorDebugAsync() {
-      console.log('🔬 Running preprocessor debug...')
+    async function showPreprocessorResult() {
       const jsonEl = document.getElementById('json')
-      if (!jsonEl) {
-        console.error('JSON element not found')
-        return
-      }
+      if (!jsonEl) return
       
       if (!state.selectionData || state.selectionData.length === 0) {
-        console.warn('No selection data available')
-        jsonEl.innerHTML = '<div class="empty-state">No selection to preprocess. Select a layer in Figma first.</div>'
+        jsonEl.innerHTML = '<div class="empty-state">No selection. Select a layer in Figma first.</div>'
         return
       }
       
-      console.log('Selection data found:', state.selectionData.length, 'nodes')
-      
-      // Show loading state
+      // Show loading
       jsonEl.innerHTML = '<div class="empty-state">Running preprocessor...</div>'
       
-      try {
-        // Run preprocessor
-        console.log('Calling preprocessSelection...')
-        const result = await preprocessSelection(state.selectionData, state.tokens, state.elementName)
-        console.log('Preprocessor result:', result)
-        
-        // Create debug output
-        const debugOutput = {
-          timestamp: new Date().toISOString(),
-          preprocessingEnabled: state.preprocessing.enabled,
-          preprocessingMode: state.preprocessing.mode,
-          selection: {
-            elementName: state.elementName,
-            type: state.sendAs,
-            nodeCount: state.selectionData.length,
-            rootNodeName: state.selectionData[0]?.name,
-            rootNodeType: state.selectionData[0]?.type
-          },
-          preprocessorResult: result,
-          rawData: state.selectionData
-        }
-        
-        // Log to console
-        console.log('=== PREPROCESSOR DEBUG OUTPUT ===')
-        console.log('Complexity Score:', result.meta?.complexityScore)
-        console.log('Metrics:', result.meta?.metrics)
-        console.log('Issues:', result.meta?.issues)
-        console.log('Processing Time:', result.meta?.processingTime + 'ms')
-        console.log('Draft Schema:', result.draftSchema)
-        console.log('Full Result:', debugOutput)
-        console.log('=================================')
-        
-        // Create styled output in JSON panel
-        jsonEl.innerHTML = ''
-        jsonEl.style.position = 'relative'
-        
-        // Copy button
-        const copyBtn = document.createElement('button')
-        copyBtn.className = 'copy-btn'
-        copyBtn.textContent = 'Copy Debug Output'
-        copyBtn.onclick = () => copyDebugOutput(debugOutput)
-        
-        // Pre element for JSON
-        const pre = document.createElement('pre')
-        pre.textContent = JSON.stringify(debugOutput, null, 2)
-        pre.style.fontFamily = 'ui-monospace, SFMono-Regular, Menlo, monospace'
-        pre.style.fontSize = '11px'
-        pre.style.background = '#f9fafb'
-        pre.style.border = '1px solid #e5e7eb'
-        pre.style.borderRadius = '4px'
-        pre.style.padding = '8px'
-        pre.style.paddingTop = '32px'
-        pre.style.margin = '0'
-        pre.style.overflowX = 'auto'
-        
-        // Summary section
-        const summary = document.createElement('div')
-        summary.style.cssText = 'position:absolute; top:40px; left:8px; right:8px; padding:8px; background:#dbeafe; border:1px solid #93c5fd; border-radius:4px; font-size:11px; z-index:5;'
-        
-        if (result.success) {
-          const score = result.meta?.complexityScore || 0
-          const route = result.meta?.recommendedRoute || 'unknown'
-          const time = result.meta?.processingTime || 0
-          const issueCount = result.meta?.issues?.length || 0
-          
-          summary.innerHTML = `
-            <strong>✓ Success</strong> | 
-            Score: <strong>${score}</strong> | 
-            Route: <strong>${route}</strong> | 
-            Time: <strong>${time}ms</strong> | 
-            Issues: <strong>${issueCount}</strong>
-          `
-          summary.style.background = score <= 40 ? '#d1fae5' : '#fef3c7'
-          summary.style.borderColor = score <= 40 ? '#a7f3d0' : '#fde68a'
-        } else {
-          summary.innerHTML = `<strong>✗ Failed:</strong> ${result.error}`
-          summary.style.background = '#fee2e2'
-          summary.style.borderColor = '#fecaca'
-        }
-        
-        jsonEl.appendChild(copyBtn)
-        jsonEl.appendChild(summary)
-        jsonEl.appendChild(pre)
-        
-      } catch (error) {
-        console.error('Debug run failed:', error)
-        jsonEl.innerHTML = `<div class="empty-state" style="color:#991b1b;">Error: ${error.message}</div>`
-      }
-    }
-    
-    function copyDebugOutput(debugOutput) {
-      const jsonString = JSON.stringify(debugOutput, null, 2)
+      // Run preprocessor
+      const result = await preprocessSelection(state.selectionData, state.tokens, state.elementName)
       
-      const textarea = document.createElement('textarea')
-      textarea.value = jsonString
-      textarea.style.position = 'fixed'
-      textarea.style.opacity = '0'
-      document.body.appendChild(textarea)
-      textarea.select()
+      // Display result as formatted JSON
+      const pre = document.createElement('pre')
+      pre.textContent = JSON.stringify({
+        complexityScore: result.meta?.complexityScore,
+        recommendedRoute: result.meta?.recommendedRoute,
+        issues: result.meta?.issues,
+        draftSchema: result.draftSchema,
+        componentProperties: state.selectionData[0]?.componentProperties,
+        availableVariants: state.selectionData[0]?.availableVariants
+      }, null, 2)
+      pre.style.cssText = 'font-family:monospace; font-size:11px; padding:12px; margin:0; white-space:pre-wrap;'
       
-      try {
-        document.execCommand('copy')
-        const btn = document.querySelector('.copy-btn')
-        if (btn) {
-          btn.classList.add('copied')
-          btn.textContent = '✓ Copied!'
-          setTimeout(() => {
-            btn.classList.remove('copied')
-            btn.textContent = 'Copy Debug Output'
-          }, 2000)
-        }
-      } catch (err) {
-        console.error('Failed to copy:', err)
-      } finally {
-        document.body.removeChild(textarea)
-      }
+      jsonEl.innerHTML = ''
+      jsonEl.appendChild(pre)
     }
 
     async function saveTestData() {
@@ -1707,6 +1851,45 @@
       applyActiveTab()
       renderSendButton()
       renderSendOptions()
+      
+      // Check token count and show warning if needed
+      checkTokenLimit(selection)
+    }
+    
+    async function checkTokenLimit(selection) {
+      const warningEl = document.getElementById('tokenWarning')
+      if (!warningEl) return
+      
+      // Clone and strip base64 data (same as what gets sent to API)
+      const dataToEstimate = JSON.parse(JSON.stringify(selection))
+      dataToEstimate.forEach(node => stripBase64Data(node))
+      
+      // Estimate tokens on STRIPPED data (what actually gets sent)
+      const estimatedTokens = estimateTokenCount(dataToEstimate)
+      const svgInfo = countSvgs(dataToEstimate)
+      
+      // Warning threshold: 75K data tokens (prompt ~35K + data ~75K + output ~25K ≈ 135K, safe from 150K cap)
+      if (estimatedTokens > 75000) {
+        // Show warning
+        const svgTokens = svgInfo.totalSize > 0 ? Math.round(svgInfo.totalSize / 3.5) : 0
+        const totalEstimate = estimatedTokens + 35000 + 25000 // Data + prompt + expected output
+        
+        let warningHtml = `<div style="background:#fef3c7; border:1px solid #fde68a; border-radius:4px; padding:8px; margin-bottom:8px;">
+          <div style="font-weight:600; font-size:12px; margin-bottom:4px; color:#92400e;">⚠️ Large Selection (~${totalEstimate.toLocaleString()} tokens estimated)</div>
+          <div style="font-size:11px; color:#78350f; line-height:1.4;">May exceed 150K token limit. Consider:`
+        
+        if (svgInfo.count > 0 && svgTokens > 2000) {
+          warningHtml += `<br>• Enable "Strip All SVG" in settings (⋮) to save ~${svgTokens.toLocaleString()} tokens`
+        }
+        
+        warningHtml += `<br>• Export design in smaller parts for best results</div></div>`
+        
+        warningEl.innerHTML = warningHtml
+        warningEl.style.display = 'block'
+      } else {
+        warningEl.innerHTML = ''
+        warningEl.style.display = 'none'
+      }
     }
 
     function setActiveTab(tab) {
@@ -1743,6 +1926,7 @@
             <input id="elementName" type="text" style="flex:1;" placeholder="Element name"  oninput="updateElementName(this.value)" />
             <button class="ellipsis-btn" onclick="openExportModal()" title="Export settings" style="flex-shrink:0;">⋮</button>
           </div>
+          <div id="tokenWarning" style="display:none;"></div>
           <div id="preview" style="flex:1;"></div>
         </div>
         <div class="tabpane-footer" style="position: sticky; bottom: 0; background: white; border-top: 1px solid #e5e7eb; padding: 8px 12px 12px;">
@@ -1754,7 +1938,7 @@
       <div class="tabpane" data-tab="json">
         <div class="tabpane-content" style="flex-direction:column;">
           <div style="padding:8px; border-bottom:1px solid #e5e7eb; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-            <button onclick="runPreprocessorDebug()" style="font-size:11px;">🔬 Run Preprocessor Debug</button>
+            <button onclick="showPreprocessorResult()" style="font-size:11px;">🔬 Test Preprocessor</button>
             <button onclick="saveTestData()" style="font-size:11px;" id="saveTestDataBtn">💾 Save Test Data</button>
             <span id="testCaseStatus" style="font-size:10px; color:#6b7280;"></span>
           </div>
@@ -1841,7 +2025,7 @@
         <div class="modal-setting">
           <div class="modal-setting-label">
             <strong>Outer Element 100% Width</strong>
-            <span class="small">Set the outermost element to 100% width so BetterForms can control sizing. When off, uses fixed pixel width from Figma.</span>
+            <span class="small">Use full width for outer element (BetterForms controls sizing). Off uses fixed Figma width.</span>
           </div>
           <label class="toggle-switch">
             <input type="checkbox" id="outerElementFullWidthToggle" onchange="toggleOuterElementFullWidth()" checked>
@@ -1850,8 +2034,28 @@
         </div>
         <div class="modal-setting">
           <div class="modal-setting-label">
+            <strong>Strip Redundant Child Backgrounds</strong>
+            <span class="small">Remove child backgrounds matching parent. Reduces CSS bloat and prevents corner bleed.</span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="stripRedundantChildFillsToggle" onchange="toggleStripRedundantChildFills()" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="modal-setting">
+          <div class="modal-setting-label">
+            <strong>Apply Overflow Hidden to Rounded</strong>
+            <span class="small">Add overflow-hidden to rounded containers. Clips child content at rounded corners.</span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="applyOverflowHiddenToggle" onchange="toggleApplyOverflowHidden()" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="modal-setting">
+          <div class="modal-setting-label">
             <strong>Strip All SVG Exports</strong>
-            <span class="small">Remove all SVG data from exports (not just >30KB). Reduces payload size but LLM won't have vector graphics data.</span>
+            <span class="small">Remove all SVG data (not just >30KB). Reduces payload but removes vector data.</span>
           </div>
           <label class="toggle-switch">
             <input type="checkbox" id="stripAllSvgToggle" onchange="toggleStripAllSvg()">

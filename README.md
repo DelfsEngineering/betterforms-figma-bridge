@@ -28,9 +28,11 @@ This plugin bridges Figma designs with FileMaker BetterForms, enabling automated
 
 Before installing this plugin, ensure you have:
 
- - **Figma Desktop App** (required for development; dev plugin import/reload is not supported in the browser)
+- **Figma Desktop App** (required for development; dev plugin import/reload is not supported in the browser)
 - **Node.js** (v16 or later) and **npm** installed on your machine
-- A Figma account
+- **A Figma account**
+  - For personal files: Free account works
+  - For shared/team files: Paid Figma plan required to run development plugins
 
 ## 🚀 Installation Instructions
 
@@ -80,8 +82,11 @@ This compiles the TypeScript source code (`src/code.ts`) into JavaScript (`dist/
 
 ### Running the Plugin
 
-1. In Figma, go to: `Plugins` → `Development` → `BetterForms Figma Bridge`
-2. The plugin panel will open with three tabs: **Preview**, **JSON**, and **Settings**
+1. Open your Figma file in the **Figma Desktop App** (not the browser)
+2. Go to: `Plugins` → `Development` → `BetterForms Figma Bridge`
+3. The plugin panel will open with three tabs: **Preview**, **JSON**, and **Settings**
+
+> **Note:** If you're working in a shared/team file, you'll need a paid Figma plan to run development plugins.
 
 ### Setting Up Your API Key (First Time)
 
@@ -103,12 +108,22 @@ Your API key is stored securely in Figma's client storage.
    - **JSON tab**: Shows the complete normalized JSON data structure
 3. **Customize the element name** (optional): Enter a custom name for your element in the input field
 4. **Adjust export settings** (optional): Click the ⋮ button to configure:
-   - **Outer Element 100% Width**: Controls if the outer element uses full width (recommended ON)
-   - **Strip All SVG Exports**: Remove large SVG data to reduce payload size (OFF by default, auto-strips SVGs over 30KB)
+   - **Outer Element 100% Width**: Use full width for outer element (recommended ON)
+   - **Strip Redundant Child Backgrounds**: Remove matching backgrounds to prevent corner bleed (ON by default)
+   - **Apply Overflow Hidden to Rounded**: Clip child content at rounded corners (ON by default)
+   - **Strip All SVG Exports**: Remove all SVG data, not just >30KB (OFF by default)
 5. Click **Send to BetterForms** to push the design data to BetterForms
 6. BetterForms processes the data and completes the conversion into a working form schema
 
 The plugin automatically updates the preview and data whenever you change your selection, making it easy to iterate on your design before sending.
+
+### Large Design Warning
+
+If your selection is very large (>75,000 data tokens, approaching 150K total limit), the plugin will show a warning banner with suggestions:
+- **Enable "Strip All SVG Exports"** if SVGs are contributing significantly to size
+- **Export in smaller parts** - break complex designs into header, body, footer, etc.
+
+This helps ensure successful conversions within the 150K token server limit.
 
 ### Preprocessing Feature
 
@@ -183,9 +198,12 @@ After making code changes and rebuilding:
 
 ✅ **Export Settings**
 - Accessible via ⋮ button next to element name
-- **Outer Element Width Control**: Choose between 100% width or fixed Figma dimensions
+- **Outer Element Width**: Choose between 100% width or fixed Figma dimensions
+- **Background Optimization**: Remove redundant child backgrounds matching parent
+- **Rounded Corner Clipping**: Auto-apply overflow-hidden to rounded containers
 - **SVG Handling**: Auto-strips SVGs over 30KB, optional to strip all
-- Settings persist across sessions
+- **Token Warning**: Alerts when selections approach 150K token server limit
+- All settings persist across sessions
 
 ✅ **Normalized JSON View**
 - Complete design data in structured JSON format
@@ -209,6 +227,11 @@ After making code changes and rebuilding:
 ## 🔮 Planned Features
 
 - **Enhanced Preprocessing**: More intelligent detection of buttons, inputs, and common patterns
+- **Auto-Split Large Designs**: Automatically split oversized designs into manageable parts (currently manual guidance provided)
+  - Smart detection of logical sections (header, body, footer)
+  - Multi-part sending with progress tracking
+  - User manually assembles parts in BetterForms
+  - *On hold due to context loss concerns - needs design review*
 - **Schema Preview**: View the generated BetterForms schema before applying
 - **Round-Trip Sync**: Update Figma designs from BetterForms changes
 - **Component Library**: Reusable component mapping and templates

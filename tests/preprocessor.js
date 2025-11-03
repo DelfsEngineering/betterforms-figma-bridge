@@ -148,18 +148,8 @@ function generateDraftSchema(selectionData, tokens, issues, elementName = '') {
     rootFields[0].BFName = bfName
   }
   
-  // Generate BetterForms schema
-  const schema = {
-    pages: [{
-      schema: {
-        fields: rootFields
-      }
-    }],
-    model: {},
-    options: {}
-  }
-  
-  return schema
+  // Return just the single root element (always one selection)
+  return rootFields[0] || null
 }
 
 function processNodeToFields(node, tokens, issues) {
@@ -235,6 +225,19 @@ function processTextNode(node, tokens, issues) {
 }
 
 function processContainerNode(node, tokens, issues) {
+  // Flag components with variants for LLM to handle state styling
+  if ((node.type === 'INSTANCE' || node.type === 'COMPONENT') && node.availableVariants && node.availableVariants.length > 1) {
+    const stateProps = node.componentProperties || {}
+    const hasStateVariant = Object.keys(stateProps).some(prop => 
+      prop.toLowerCase().includes('state') || 
+      prop.toLowerCase().includes('hover') || 
+      prop.toLowerCase().includes('active')
+    )
+    if (hasStateVariant || node.availableVariants.length > 1) {
+      issues.push(`Component "${node.name}" has ${node.availableVariants.length} variants - LLM should convert to hover/active/disabled states`)
+    }
+  }
+  
   // Check if this GROUP has SVG export (e.g., icon groups like "ic_star")
   if (node.type === 'GROUP' && node.svg) {
     // Return as SVG using type: "html"
