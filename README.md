@@ -84,13 +84,13 @@ This compiles the TypeScript source code (`src/code.ts`) into JavaScript (`dist/
 
 1. Open your Figma file in the **Figma Desktop App** (not the browser)
 2. Go to: `Plugins` → `Development` → `BetterForms Figma Bridge`
-3. The plugin panel will open with three tabs: **Preview**, **JSON**, and **Settings**
+3. The plugin panel will open with three tabs: **Preview**, **JSON**, and **Account**
 
 > **Note:** If you're working in a shared/team file, you'll need a paid Figma plan to run development plugins.
 
 ### Setting Up Your API Key (First Time)
 
-1. Click the **Settings** tab
+1. Click the **Account** tab
 2. Get your API key from BetterForms:
    - Open the FileMaker BetterForms Editor
    - Go to **Account / Users** tab

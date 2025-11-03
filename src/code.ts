@@ -247,6 +247,14 @@ function uint8ToBase64(bytes: Uint8Array): string {
 
 async function postSelectionFull() {
     const sel = figma.currentPage.selection;
+    
+    // Notify UI that we're starting (show loading spinner)
+    if (sel.length > 0) {
+        figma.ui.postMessage({ type: 'selection.loading' });
+        // Brief delay to allow UI to render spinner before heavy export work
+        await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    
     const data = await Promise.all(sel.map(n => serializeNode(n, 6)));
     if (sel[0]) {
         try {
@@ -319,6 +327,10 @@ async function postSelectionFull() {
 		stripRedundantChildFills: stripRedundantChildFills !== false,
 		applyOverflowHidden: applyOverflowHidden !== false
 	});
+	// Send initial selection (if any)
+	if (figma.currentPage.selection.length > 0) {
+		figma.ui.postMessage({ type: 'selection.loading' });
+	}
 	postSelectionFull();
 })();
 
@@ -403,6 +415,10 @@ figma.ui.onmessage = async (msg) => {
             stripRedundantChildFills: stripRedundantChildFills !== false,
             applyOverflowHidden: applyOverflowHidden !== false
         });
+        // Send loading message if there's a selection
+        if (figma.currentPage.selection.length > 0) {
+            figma.ui.postMessage({ type: 'selection.loading' });
+        }
         await postSelectionFull();
         return;
     }
@@ -412,8 +428,10 @@ figma.ui.onmessage = async (msg) => {
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 figma.on('selectionchange', () => {
 	if (debounceTimer) clearTimeout(debounceTimer);
-	debounceTimer = setTimeout(() => {
-		postSelectionFull();
+	debounceTimer = setTimeout(async () => {
+		// Notify UI we're starting (show loading spinner)
+		figma.ui.postMessage({ type: 'selection.loading' });
+		await postSelectionFull();
 	}, 300);
 });
 
