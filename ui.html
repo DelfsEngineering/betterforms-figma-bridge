@@ -208,8 +208,8 @@
     }
   </style>
   <script>
-    const VERSION = '0.6.79'
-    const BUILD = 79
+    const VERSION = '0.6.80'
+    const BUILD = 80
     let state = { 
       apiKey: '', 
       activeTab: 'preview', 
@@ -296,43 +296,11 @@
       state.elementName = value
     }
 
-    function togglePreprocessingMode() {
-      const checkbox = document.getElementById('preprocessingEnabled')
-      const modeGroup = document.getElementById('preprocessModeGroup')
-      
-      state.preprocessing.enabled = checkbox.checked
-      modeGroup.style.display = checkbox.checked ? 'block' : 'none'
-      
-      savePreprocessingSettings()
-    }
-
-    function savePreprocessingSettings() {
-      const enabled = document.getElementById('preprocessingEnabled').checked
-      const mode = document.getElementById('preprocessMode').value
-      
-      state.preprocessing.enabled = enabled
-      state.preprocessing.mode = mode
-      
-      parent.postMessage({ 
-        pluginMessage: { 
-          type: 'save-preprocessing', 
-          enabled: enabled,
-          mode: mode
-        } 
-      }, '*')
-    }
-
+    // Preprocessing is now always enabled in 'auto' mode
     function loadPreprocessingSettings(enabled, mode) {
-      state.preprocessing.enabled = enabled !== false
-      state.preprocessing.mode = mode || 'auto'
-      
-      const checkbox = document.getElementById('preprocessingEnabled')
-      const modeSelect = document.getElementById('preprocessMode')
-      const modeGroup = document.getElementById('preprocessModeGroup')
-      
-      if (checkbox) checkbox.checked = state.preprocessing.enabled
-      if (modeSelect) modeSelect.value = state.preprocessing.mode
-      if (modeGroup) modeGroup.style.display = state.preprocessing.enabled ? 'block' : 'none'
+      // Always enable preprocessing in auto mode
+      state.preprocessing.enabled = true
+      state.preprocessing.mode = 'auto'
     }
 
     function loadExportSettings(stripAllSvg, outerElementFullWidth, stripRedundantChildFills, applyOverflowHidden) {
@@ -1973,35 +1941,6 @@
             </div>
             <div class="row" style="justify-content:flex-end;">
               <button id="logoutBtn" onclick="logout()">Disconnect</button>
-            </div>
-          </div>
-          
-          <!-- Preprocessing Settings -->
-          <div style="margin-top:24px; padding-top:16px; border-top:1px solid #e5e7eb;">
-            <strong style="font-size:13px; display:block; margin-bottom:8px;">Preprocessing</strong>
-            <p class="small" style="margin:0 0 12px 0; line-height:1.5;">
-              Convert basic Figma properties locally before sending to AI. Reduces cost by ~60% and speeds up conversions.
-            </p>
-            
-            <label style="display:flex; align-items:center; gap:8px; margin-bottom:12px; cursor:pointer;">
-              <input type="checkbox" id="preprocessingEnabled" onchange="togglePreprocessingMode()" />
-              <span style="font-size:12px;">Enable JS Preprocessing</span>
-            </label>
-            
-            <div id="preprocessModeGroup" style="display:none; margin-left:24px;">
-              <div class="row" style="margin-bottom:8px; align-items:center;">
-                <label for="preprocessMode" style="width:60px; font-size:12px;">Mode:</label>
-                <select id="preprocessMode" onchange="savePreprocessingSettings()" style="flex:1; padding:4px 6px; border:1px solid #d1d5db; border-radius:4px; font-size:12px;">
-                  <option value="auto">Auto (recommended)</option>
-                  <option value="on">Always preprocess</option>
-                  <option value="off">Never preprocess</option>
-                </select>
-              </div>
-              <div class="small" style="margin-left:68px; color:#6b7280; line-height:1.4;">
-                <strong>Auto:</strong> Preprocess simple designs, skip complex ones<br>
-                <strong>Always:</strong> Force preprocessing (may reduce quality)<br>
-                <strong>Never:</strong> Send raw data (slower but highest quality)
-              </div>
             </div>
           </div>
           

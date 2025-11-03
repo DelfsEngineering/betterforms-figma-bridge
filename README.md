@@ -127,15 +127,13 @@ This helps ensure successful conversions within the 150K token server limit.
 
 ### Preprocessing Feature
 
-The plugin includes intelligent preprocessing that converts basic Figma properties locally:
+The plugin automatically preprocesses all designs before sending to BetterForms:
 - **Speeds up conversions** by handling simple transformations locally
 - **Optimizes data** before sending to BetterForms
-- **Three modes available** in Account tab:
-  - **Auto (recommended)**: Preprocesses simple designs, skips complex ones
-  - **Always**: Forces preprocessing (may reduce quality on complex designs)
-  - **Never**: Sends raw data (slower but highest quality)
-
-The preprocessor handles layout (flexbox), colors, borders, padding, text styles, and more automatically.
+- **Intelligent auto mode**: Preprocesses simple designs, includes raw data for complex cases
+- **Handles**: Layout (flexbox), colors, borders, padding, text styles, rounded corners, overflow
+- **Background optimization**: Strips redundant child backgrounds matching parent
+- **Always enabled** for best performance and cost savings
 
 ### What Gets Sent to BetterForms
 
@@ -191,9 +189,9 @@ After making code changes and rebuilding:
 - Customizable element naming
 
 ✅ **Intelligent Preprocessing**
-- Converts basic Figma properties locally for faster processing
-- Three modes: Auto (recommended), Always, or Never
-- Handles layout, colors, text styles, borders, padding automatically
+- Automatically converts basic Figma properties locally for faster processing
+- Always enabled in smart auto mode
+- Handles layout, colors, text styles, borders, padding, rounded corners, overflow
 - Optimizes data before sending to BetterForms
 
 ✅ **Export Settings**
