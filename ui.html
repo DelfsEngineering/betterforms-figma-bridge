@@ -233,8 +233,8 @@
     }
   </style>
   <script>
-    const VERSION = '0.7.88'
-    const BUILD = 88
+    const VERSION = '0.7.93'
+    const BUILD = 93
     let state = { 
       apiKey: '', 
       activeTab: 'preview', 
@@ -1936,9 +1936,8 @@
     <div class="tabpanes">
       <div class="tabpane active" data-tab="preview">
         <div class="tabpane-content" style="padding: 12px;">
-          <div style="width:100%; padding:0 0 8px 0; display:flex; gap:8px; align-items:center; justify-content:space-between;">
+          <div style="width:100%; padding:0 0 8px 0; display:flex; gap:8px; align-items:center;">
             <input id="elementName" type="text" style="flex:1;" placeholder="Element name"  oninput="updateElementName(this.value)" />
-            <button class="ellipsis-btn" onclick="openExportModal()" title="Export settings" style="flex-shrink:0;">⋮</button>
           </div>
           <div id="tokenWarning" style="display:none;"></div>
           <div id="preview" style="flex:1; display:flex; align-items:center; justify-content:center;">
@@ -1947,7 +1946,10 @@
         </div>
         <div class="tabpane-footer" style="position: sticky; bottom: 0; background: white; border-top: 1px solid #e5e7eb; padding: 8px 12px 12px;">
           <div id="sendOptions" class="row inline" style="margin-bottom:8px; padding-bottom:6px; display:none;"></div>
-          <button id="sendBtn" class="primary wide" onclick="sendToBetterForms()">Send to BetterForms</button>
+          <div style="display: flex; gap: 4px; align-items: stretch;">
+            <button id="sendBtn" class="primary" style="flex: 1;" onclick="sendToBetterForms()">Send to BetterForms</button>
+            <button onclick="openExportModal()" title="Export settings" style="padding: 0; width: 40px; height: 40px; min-height: 40px; flex-shrink: 0; background: white; border: 1px solid #d1d5db; color: #111827; font-size: 20px; line-height: 1; display: flex; align-items: center; justify-content: center; border-radius: 4px; cursor: pointer;">⚙</button>
+          </div>
           <div id="sendFeedback" class="feedback" style="display:none;"></div>
         </div>
       </div>
