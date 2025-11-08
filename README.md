@@ -37,29 +37,29 @@ Before installing this plugin, ensure you have:
 
 Since this plugin is not yet published to the Figma Community, you'll need to install it manually as a development plugin.
 
-### Step 1: Clone the Repository
+### Step 1: Download the Plugin
 
-```bash
-git clone https://github.com/DelfsEngineering/betterforms-figma-bridge.git
-cd betterforms-figma-bridge
-```
+1. Go to the [GitHub repository](https://github.com/DelfsEngineering/betterforms-figma-bridge)
+2. Click the green **"Code"** button
+3. Select **"Download ZIP"**
+4. Unzip the downloaded file to a location on your computer
 
-### Step 2: Import the Plugin
+### Step 2: Import the Plugin into Figma
 
- 1. **Open Figma Desktop App** (required for development)
+1. **Open Figma Desktop App** (required for development plugins)
 
 2. **Open any Figma file** or create a new one
 
 3. **Open the Plugins menu:**
-   - Click on the menu icon (☰) in the top-left
+   - Click the menu icon (☰) in the top-left
    - Navigate to: `Plugins` → `Development` → `Import plugin from manifest...`
 
 4. **Select the manifest file:**
-   - Browse to the cloned repository folder: `betterforms-figma-bridge/`
+   - Browse to the unzipped folder
    - Select the `manifest.json` file
    - Click **Open**
 
-5. **Success!** The plugin "BetterForms Figma Bridge" is now available in your development plugins.
+5. **Done!** The plugin is now installed and ready to use.
 
 ## 🎮 How to Use
 
