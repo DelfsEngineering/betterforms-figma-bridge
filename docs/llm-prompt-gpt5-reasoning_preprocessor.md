@@ -407,7 +407,7 @@ Extract gradient from Figma `fills` array and convert to CSS:
 
 ### Enhancement: Semantic Improvements
 
-Apply even if not flagged: Better BFName values (e.g., `"Frame 123"` → `"card_container"`), semantic HTML tags (`<h1>`, `<p>`, `<blockquote>`), accessibility (`alt`, `aria-label`, heading hierarchy)
+Apply even if not flagged: Better BFName values (e.g., `"Frame 123"` → `"card_container"`), semantic HTML tags (`<h1>`, `<p>`), accessibility (`alt`, `aria-label`, heading hierarchy)
 
 **Better BFName values:**
 - `"Name"` → `"customer_name"`
@@ -417,7 +417,6 @@ Apply even if not flagged: Better BFName values (e.g., `"Frame 123"` → `"card_
 **Semantic HTML tags:**
 - Large bold text → `<h1>`, `<h2>`, `<h3>`
 - Body text → `<p>`
-- Quotes → `<blockquote>`
 - Lists → `<ul>` + `<li>`
 
 **Accessibility:**
