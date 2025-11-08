@@ -28,8 +28,7 @@ This plugin bridges Figma designs with FileMaker BetterForms, enabling automated
 
 Before installing this plugin, ensure you have:
 
-- **Figma Desktop App** (required for development; dev plugin import/reload is not supported in the browser)
-- **Node.js** (v16 or later) and **npm** installed on your machine
+- **Figma Desktop App** (required for development plugins; import/reload is not supported in the browser)
 - **A Figma account**
   - For personal files: Free account works
   - For shared/team files: Paid Figma plan required to run development plugins
@@ -45,23 +44,7 @@ git clone https://github.com/DelfsEngineering/betterforms-figma-bridge.git
 cd betterforms-figma-bridge
 ```
 
-### Step 2: Install Dependencies
-
-```bash
-npm install
-```
-
-### Step 3: Build the Plugin
-
-```bash
-npm run build
-```
-
-This compiles the TypeScript source code (`src/code.ts`) into JavaScript (`dist/code.js`) that Figma can execute.
-
-> **Note:** During development, you can use `npm run watch` to automatically rebuild when you make changes to the source code.
-
-### Step 4: Load the Plugin in Figma
+### Step 2: Import the Plugin
 
  1. **Open Figma Desktop App** (required for development)
 

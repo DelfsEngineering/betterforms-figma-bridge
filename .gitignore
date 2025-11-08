@@ -1,8 +1,8 @@
 # Node modules
 node_modules/
 
-# Build output
-dist/
+# Build output (keep dist/code.js committed for easy installation)
+# dist/
 build/
 
 # OS files
