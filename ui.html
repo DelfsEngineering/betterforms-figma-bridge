@@ -233,8 +233,8 @@
     }
   </style>
   <script>
-    const VERSION = '0.7.93'
-    const BUILD = 93
+    const VERSION = '0.8.6'
+    const BUILD = 106
     let state = { 
       apiKey: '', 
       activeTab: 'preview', 
@@ -837,6 +837,42 @@
         }
       }
       
+      // Check for Font Awesome icons (Font Awesome 6 Pro, Font Awesome 7, etc.)
+      let isFontAwesomeIcon = false
+      let fontAwesomeClass = ''
+      if (node.textStyle && node.textStyle.fontName && node.textStyle.fontName.family) {
+        const fontFamily = node.textStyle.fontName.family
+        const fontStyle = node.textStyle.fontName.style || ''
+        
+        // Check if it's Font Awesome (6, 7, or any version)
+        if (fontFamily.toLowerCase().includes('font awesome')) {
+          isFontAwesomeIcon = true
+          
+          // Determine the Font Awesome style class
+          const styleLower = fontStyle.toLowerCase()
+          if (styleLower.includes('solid')) {
+            fontAwesomeClass = 'fa-solid'
+          } else if (styleLower.includes('regular')) {
+            fontAwesomeClass = 'fa-regular'
+          } else if (styleLower.includes('light')) {
+            fontAwesomeClass = 'fa-light'
+          } else if (styleLower.includes('thin')) {
+            fontAwesomeClass = 'fa-thin'
+          } else if (styleLower.includes('duotone')) {
+            fontAwesomeClass = 'fa-duotone'
+          } else if (styleLower.includes('brands')) {
+            fontAwesomeClass = 'fa-brands'
+          } else {
+            // Default to solid if no style detected
+            fontAwesomeClass = 'fa-solid'
+          }
+          
+          // Convert to Font Awesome icon tag
+          const iconName = node.characters || 'question'
+          field.html = `<i class="${fontAwesomeClass} fa-${iconName}"></i>`
+        }
+      }
+      
       // Add size classes
       if (node.size) {
         field.styleClasses.push(`w-[${Math.round(node.size.w)}px]`)
@@ -850,8 +886,8 @@
           field.styleClasses.push(`text-[${Math.round(node.textStyle.fontSize)}px]`)
         }
         
-        // Font weight - Figma stores as string in fontName.style
-        if (node.textStyle.fontName && node.textStyle.fontName.style) {
+        // Font weight - Figma stores as string in fontName.style (skip for Font Awesome)
+        if (!isFontAwesomeIcon && node.textStyle.fontName && node.textStyle.fontName.style) {
           const style = node.textStyle.fontName.style.toLowerCase()
           if (style.includes('extra bold') || style.includes('extrabold') || style.includes('black')) {
             field.styleClasses.push('font-extrabold')
@@ -865,8 +901,8 @@
           // Regular/Light/Thin - no class needed (default)
         }
         
-        // Store font family in a custom data attribute for LLM to use
-        if (node.textStyle.fontName && node.textStyle.fontName.family) {
+        // Store font family in a custom data attribute for LLM to use (skip for Font Awesome)
+        if (!isFontAwesomeIcon && node.textStyle.fontName && node.textStyle.fontName.family) {
           field.attributes.formElement['data-figma-font'] = node.textStyle.fontName.family
         }
       }
@@ -1031,8 +1067,14 @@
       const bgClass = getBackgroundClass(node, tokens)
       if (bgClass) field.styleClasses.push(bgClass)
       
+      // Add node-level opacity if not 1
+      if (typeof node.opacity === 'number' && node.opacity !== 1) {
+        const opacityPercent = Math.round(node.opacity * 100)
+        field.styleClasses.push(`opacity-[${opacityPercent}%]`)
+      }
+      
       // Add border
-      const borderClasses = getBorderClasses(node, tokens)
+      const borderClasses = getBorderClasses(node, tokens, issues)
       if (borderClasses.length > 0) {
         field.styleClasses.push(...borderClasses)
       }
@@ -1041,17 +1083,15 @@
       const radiusClass = getCornerRadiusClass(node)
       if (radiusClass) field.styleClasses.push(radiusClass)
       
+      // Add effects (drop shadows)
+      const effectClasses = getEffectClasses(node, issues)
+      if (effectClasses.length > 0) {
+        field.styleClasses.push(...effectClasses)
+      }
+      
       // Check for absolute positioning
       if (node.constraints && node.constraints.horizontal === 'ABSOLUTE') {
         issues.push(`Absolute positioning on "${node.name}" - raw coordinates in absoluteTransform`)
-      }
-      
-      // Check for complex effects
-      if (node.effects && Array.isArray(node.effects) && node.effects.length > 0) {
-        const visibleEffects = node.effects.filter(e => e.visible !== false)
-        if (visibleEffects.length > 2) {
-          issues.push(`Complex effects on "${node.name}" - raw effects data provided for LLM`)
-        }
       }
       
       // Process children
@@ -1125,8 +1165,14 @@
         if (bgClass) field.styleClasses.push(bgClass)
       }
       
+      // Add node-level opacity if not 1
+      if (typeof node.opacity === 'number' && node.opacity !== 1) {
+        const opacityPercent = Math.round(node.opacity * 100)
+        field.styleClasses.push(`opacity-[${opacityPercent}%]`)
+      }
+      
       // Add border
-      const borderClasses = getBorderClasses(node, tokens)
+      const borderClasses = getBorderClasses(node, tokens, issues)
       if (borderClasses.length > 0) {
         field.styleClasses.push(...borderClasses)
       }
@@ -1134,6 +1180,12 @@
       // Add corner radius
       const radiusClass = getCornerRadiusClass(node)
       if (radiusClass) field.styleClasses.push(radiusClass)
+      
+      // Add effects (drop shadows)
+      const effectClasses = getEffectClasses(node, issues)
+      if (effectClasses.length > 0) {
+        field.styleClasses.push(...effectClasses)
+      }
       
       if (node.type === 'VECTOR' && !node.svg) {
         issues.push(`Vector "${node.name}" - SVG export failed, may need manual conversion`)
@@ -1205,34 +1257,75 @@
       return null
     }
 
-    function getBorderClasses(node, tokens) {
+    function getBorderClasses(node, tokens, issues) {
       const classes = []
       
       if (!node.strokes || !Array.isArray(node.strokes) || node.strokes.length === 0) {
         return classes
       }
       
-      // Add border width
-      if (node.strokeWeight) {
-        classes.push(`border-[${Math.round(node.strokeWeight)}px]`)
+      // Find first visible stroke
+      const visibleStroke = node.strokes.find(s => s.visible !== false)
+      if (!visibleStroke || visibleStroke.type !== 'SOLID') {
+        return classes
       }
       
-      // Add border color
-      const stroke = node.strokes[0]
-      if (stroke && stroke.type === 'SOLID' && stroke.color) {
-        const color = stroke.color
+      // Detect single-side border based on padding pattern (deterministic)
+      let borderSide = null // 'b', 't', 'l', 'r', or null for all sides
+      
+      if (node.autolayout?.padding) {
+        const p = node.autolayout.padding
+        const hasTop = p.t > 0
+        const hasBottom = p.b > 0
+        const hasLeft = p.l > 0
+        const hasRight = p.r > 0
+        
+        // Side with no padding = border on that side
+        if (!hasTop && hasBottom && hasLeft && hasRight) {
+          borderSide = 'b' // bottom border (horizontal tabs)
+        } else if (hasTop && !hasBottom && hasLeft && hasRight) {
+          borderSide = 't' // top border
+        } else if (hasTop && hasBottom && !hasLeft && hasRight) {
+          borderSide = 'r' // right border (vertical tabs/sidebar)
+        } else if (hasTop && hasBottom && hasLeft && !hasRight) {
+          borderSide = 'l' // left border (vertical tabs/sidebar)
+        }
+      }
+      
+      // Add border width with appropriate side
+      const strokeWeight = node.strokeWeight || 1
+      if (typeof strokeWeight === 'number' && strokeWeight > 0) {
+        const weight = Math.round(strokeWeight)
+        if (borderSide) {
+          classes.push(`border-${borderSide}-[${weight}px]`)
+        } else {
+          classes.push(`border-[${weight}px]`)
+        }
+      }
+      
+      // Add border color with appropriate side
+      if (visibleStroke.color) {
+        const color = visibleStroke.color
         
         // Check for token
         if (tokens && tokens.used) {
           for (const token of tokens.used) {
             if (colorsMatch(color, token.value)) {
-              classes.push(`border-[var(--${token.name})]`)
+              if (borderSide) {
+                classes.push(`border-${borderSide}-[var(--${token.name})]`)
+              } else {
+                classes.push(`border-[var(--${token.name})]`)
+              }
               return classes
             }
           }
         }
         
-        classes.push(`border-[${color}]`)
+        if (borderSide) {
+          classes.push(`border-${borderSide}-[${color}]`)
+        } else {
+          classes.push(`border-[${color}]`)
+        }
       }
       
       return classes
@@ -1254,6 +1347,94 @@
       if (radius === 9999) return 'rounded-full'
       
       return `rounded-[${radius}px]`
+    }
+
+    function getEffectClasses(node, issues) {
+      const classes = []
+      
+      if (!node.effects || !Array.isArray(node.effects) || node.effects.length === 0) {
+        return classes
+      }
+      
+      // Filter for visible DROP_SHADOW effects only
+      const dropShadows = node.effects.filter(e => 
+        e.type === 'DROP_SHADOW' && e.visible !== false
+      )
+      
+      if (dropShadows.length === 0) return classes
+      
+      // If more than 2 shadows, flag as complex and provide raw data
+      if (dropShadows.length > 2) {
+        issues.push(`Multiple shadows (${dropShadows.length}) on "${node.name}" - raw effects data provided for LLM`)
+        return classes
+      }
+      
+      // Try to match common Tailwind shadow presets for single shadow
+      if (dropShadows.length === 1) {
+        const shadow = dropShadows[0]
+        const matchedPreset = matchTailwindShadow(shadow)
+        if (matchedPreset) {
+          classes.push(matchedPreset)
+          return classes
+        }
+      }
+      
+      // For 1-2 shadows that don't match presets, create arbitrary shadow value
+      // Format: shadow-[x_y_blur_spread_color]
+      const shadowValues = dropShadows.map(s => {
+        const x = Math.round(s.offset?.x || 0)
+        const y = Math.round(s.offset?.y || 0)
+        const blur = Math.round(s.radius || 0)
+        const spread = Math.round(s.spread || 0)
+        const color = s.color || '#000000'
+        const opacity = s.opacity !== undefined ? s.opacity : 1
+        
+        // Convert opacity to rgba if needed
+        let colorValue = color
+        if (opacity < 1) {
+          // Convert hex to rgba with opacity
+          const hex = color.replace('#', '')
+          const r = parseInt(hex.substring(0, 2), 16)
+          const g = parseInt(hex.substring(2, 4), 16)
+          const b = parseInt(hex.substring(4, 6), 16)
+          colorValue = `rgba(${r},${g},${b},${opacity})`
+        }
+        
+        return `${x}px_${y}px_${blur}px_${spread}px_${colorValue}`
+      })
+      
+      // Join multiple shadows with comma
+      classes.push(`shadow-[${shadowValues.join(',')}]`)
+      
+      return classes
+    }
+
+    function matchTailwindShadow(shadow) {
+      const x = Math.round(shadow.offset?.x || 0)
+      const y = Math.round(shadow.offset?.y || 0)
+      const blur = Math.round(shadow.radius || 0)
+      const spread = Math.round(shadow.spread || 0)
+      
+      // Tailwind shadow presets (approximations)
+      // shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05)
+      if (x === 0 && y === 1 && blur === 2 && spread === 0) return 'shadow-sm'
+      
+      // shadow (default): 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)
+      if (x === 0 && y === 1 && blur === 3 && spread === 0) return 'shadow'
+      
+      // shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)
+      if (x === 0 && y === 4 && blur === 6 && spread === -1) return 'shadow-md'
+      
+      // shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)
+      if (x === 0 && y === 10 && blur === 15 && spread === -3) return 'shadow-lg'
+      
+      // shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)
+      if (x === 0 && y === 20 && blur === 25 && spread === -5) return 'shadow-xl'
+      
+      // shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25)
+      if (x === 0 && y === 25 && blur === 50 && spread === -12) return 'shadow-2xl'
+      
+      return null // No match
     }
 
     function colorsMatch(color1, color2) {
@@ -1363,8 +1544,6 @@
             response: null,
             note: 'Saved without LLM response'
           }
-          
-          console.log('📦 Test data captured:', state.lastTestCase.timestamp)
         } catch (e) {
           if (statusEl) statusEl.textContent = `⚠️ Error: ${e.message}`
           setTimeout(() => { if (statusEl) statusEl.textContent = '' }, 3000)
@@ -1456,11 +1635,6 @@
         const dataToSend = JSON.parse(JSON.stringify(state.selectionData))
         dataToSend.forEach(node => stripBase64Data(node))
         const strippedSize = JSON.stringify(dataToSend).length
-        console.log('Payload optimization:', {
-          original: `${(originalSize / 1024).toFixed(1)}KB`,
-          stripped: `${(strippedSize / 1024).toFixed(1)}KB`,
-          reduction: `${((1 - strippedSize / originalSize) * 100).toFixed(1)}%`
-        })
         
         // Determine preprocessing mode
         let preprocessMode = 'off'
@@ -1488,7 +1662,6 @@
                 draftSchema: null,
                 meta: preprocessResult.meta
               }
-              console.log('Auto mode: complexity too high, falling back to raw mode', preprocessResult.meta.complexityScore)
             } else {
               // For 'on' mode or 'auto' with low complexity, use draft schema
               preprocessingPayload = {
@@ -1497,7 +1670,6 @@
                 draftSchema: preprocessResult.draftSchema,
                 meta: preprocessResult.meta
               }
-              console.log('Preprocessing result:', preprocessResult.meta)
             }
           } else {
             console.warn('Preprocessing failed, falling back to raw mode:', preprocessResult.error)
@@ -1526,15 +1698,8 @@
           },
           response: null // Will be populated if API succeeds
         }
-        console.log('📦 Test case captured (before API call):', state.lastTestCase.timestamp)
         
         const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-        console.log('🚀 Sending to BetterForms [' + requestId + ']:', {
-          elementName: state.elementName,
-          type: state.sendAs,
-          preprocessing: preprocessingPayload,
-          dataSize: JSON.stringify(dataToSend).length
-        })
         
         // Create an AbortController with 5-minute timeout for large LLM processing
         const controller = new AbortController()
@@ -1560,7 +1725,6 @@
             signal: controller.signal
           })
           clearTimeout(timeoutId)
-          console.log('✅ Fetch completed [' + requestId + ']')
         } catch (fetchError) {
           clearTimeout(timeoutId)
           console.error('❌ Fetch failed [' + requestId + ']:', fetchError)
@@ -1596,12 +1760,9 @@
         }
         const result = await response.json()
         
-        console.log('BetterForms response:', result.meta || result)
-        
         // 🆕 UPDATE test case with response (test case was already captured before API call)
         if (state.lastTestCase) {
           state.lastTestCase.response = result
-          console.log('✅ Test case updated with API response:', state.lastTestCase.timestamp)
         }
         
         // Build success message with preprocessing info if available
@@ -1776,10 +1937,8 @@
       }
       const first = selection[0]
       
-      // Set element name from selection only if user hasn't modified it
-      if (!state.elementName || state.elementName === '') {
-        state.elementName = first.name || ''
-      }
+      // Always update element name from new selection
+      state.elementName = first.name || ''
       if (elementNameInput) {
         elementNameInput.value = state.elementName
         elementNameInput.parentElement.style.display = 'flex'
@@ -1937,7 +2096,8 @@
       <div class="tabpane active" data-tab="preview">
         <div class="tabpane-content" style="padding: 12px;">
           <div style="width:100%; padding:0 0 8px 0; display:flex; gap:8px; align-items:center;">
-            <input id="elementName" type="text" style="flex:1;" placeholder="Element name"  oninput="updateElementName(this.value)" />
+            <label for="elementName" style="font-weight: 500; color: #374151; white-space: nowrap;">Element Name:</label>
+            <input id="elementName" type="text" style="flex:2; min-width: 200px;" placeholder="Element name"  oninput="updateElementName(this.value)" />
           </div>
           <div id="tokenWarning" style="display:none;"></div>
           <div id="preview" style="flex:1; display:flex; align-items:center; justify-content:center;">

@@ -131,8 +131,9 @@ The plugin automatically preprocesses all designs before sending to BetterForms:
 - **Speeds up conversions** by handling simple transformations locally
 - **Optimizes data** before sending to BetterForms
 - **Intelligent auto mode**: Preprocesses simple designs, includes raw data for complex cases
-- **Handles**: Layout (flexbox), colors, borders, padding, text styles, rounded corners, overflow
+- **Handles**: Layout (flexbox), colors, borders, padding, text styles, rounded corners, overflow, drop shadows, Font Awesome icons
 - **Background optimization**: Strips redundant child backgrounds matching parent
+- **Icon conversion**: Automatically converts Font Awesome text to proper icon tags
 - **Always enabled** for best performance and cost savings
 
 ### What Gets Sent to BetterForms
@@ -191,7 +192,8 @@ After making code changes and rebuilding:
 ✅ **Intelligent Preprocessing**
 - Automatically converts basic Figma properties locally for faster processing
 - Always enabled in smart auto mode
-- Handles layout, colors, text styles, borders, padding, rounded corners, overflow
+- Handles layout, colors, text styles, borders, padding, rounded corners, overflow, drop shadows, icons
+- Font Awesome icon auto-conversion (v6, v7, all styles)
 - Optimizes data before sending to BetterForms
 
 ✅ **Export Settings**

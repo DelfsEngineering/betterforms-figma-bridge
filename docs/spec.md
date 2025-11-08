@@ -75,9 +75,10 @@ Figma JSON → JS Converter → Draft BF JSON → LLM → Final BF JSON
    - "Use `rounded-lg` instead of `rounded-[8px]`"
    - "Combine to `shadow-md` instead of custom values"
 
-4. **Icon detection & handling**
+4. **Icon detection & handling** *(Now handled by preprocessor as of v0.8.6)*
    - Font Awesome text → `<i class="fa-regular fa-edit">`
    - Extract icon name from character/unicode
+   - Note: Preprocessor now automatically converts Font Awesome icons
 
 5. **Edge cases**
    - Complex gradients → inline styles

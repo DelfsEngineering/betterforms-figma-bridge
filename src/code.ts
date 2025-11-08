@@ -17,6 +17,11 @@ function serializePaint(paint: Paint): any {
 	if ((paint.type === 'GRADIENT_LINEAR' || paint.type === 'GRADIENT_RADIAL' || paint.type === 'GRADIENT_ANGULAR' || paint.type === 'GRADIENT_DIAMOND') && (paint as GradientPaint).gradientStops) {
 		out.gradientStops = (paint as GradientPaint).gradientStops.map(gs => ({ position: gs.position, color: toHex(gs.color) }));
 	}
+	if (paint.type === 'IMAGE') {
+		const img = paint as ImagePaint;
+		if (img.imageHash) out.imageHash = img.imageHash;
+		if (img.scaleMode) out.scaleMode = img.scaleMode;
+	}
 	return out;
 }
 
@@ -57,6 +62,11 @@ async function serializeNode(node: SceneNode, depth: number): Promise<any> {
 
 	if ('constraints' in node) {
 		out.constraints = (node as any).constraints;
+	}
+
+	// Capture node-level opacity (separate from fill opacity)
+	if ('opacity' in (node as any) && typeof (node as any).opacity === 'number') {
+		out.opacity = (node as any).opacity;
 	}
 
 	// Capture layout sizing for flex-grow detection
@@ -151,7 +161,15 @@ async function serializeNode(node: SceneNode, depth: number): Promise<any> {
 	if ('strokes' in (node as any) && Array.isArray((node as any).strokes)) {
 		try {
 			out.strokes = ((node as any).strokes as ReadonlyArray<Paint>).map(serializePaint);
-			if (typeof (node as any).strokeWeight === 'number') out.strokeWeight = (node as any).strokeWeight;
+			// Export strokeWeight - check individual side weights first, then general strokeWeight
+		const n = node as any;
+		
+		if (typeof n.strokeBottomWeight === 'number') out.strokeWeight = n.strokeBottomWeight;
+			else if (typeof n.strokeTopWeight === 'number') out.strokeWeight = n.strokeTopWeight;
+			else if (typeof n.strokeLeftWeight === 'number') out.strokeWeight = n.strokeLeftWeight;
+			else if (typeof n.strokeRightWeight === 'number') out.strokeWeight = n.strokeRightWeight;
+			else if (typeof n.strokeWeight === 'number') out.strokeWeight = n.strokeWeight;
+			else out.strokeWeight = 1; // Fallback
 			if (typeof (node as any).strokeAlign === 'string') out.strokeAlign = (node as any).strokeAlign;
 		} catch {}
 	}
@@ -263,7 +281,6 @@ async function postSelectionFull() {
 
             const w = (exportNode as any).width as number | undefined;
             const h = (exportNode as any).height as number | undefined;
-            console.log('Export node dimensions:', { name: exportNode.name, type: exportNode.type, w, h });
 
             // Generate a higher‑quality preview by targeting a larger longest edge.
             // This improves visual crispness in the ~400px tall preview panel.
@@ -297,7 +314,6 @@ async function postSelectionFull() {
                 const thumbPng = await exportNode.exportAsync({ format: 'PNG', constraint: thumbConstraint });
                 const thumbB64 = uint8ToBase64(thumbPng);
                 (data[0] as any).thumbnailUrl = `data:image/png;base64,${thumbB64}`;
-                console.log('Preview/Thumb generated. preview:', constraint.type, constraint.value, 'thumb:', thumbConstraint.type, (thumbConstraint as any).value);
             } catch (thumbErr) {
                 console.warn('Thumbnail export failed:', thumbErr);
             }

@@ -4,21 +4,21 @@ Clean, organized documentation for the Figma-to-BetterForms conversion system.
 
 ---
 
-## 📌 Core Prompts (2 files)
+## 📌 Core Prompt (1 file)
 
-### `llm-prompt-template.md`
-**Purpose:** Main production prompt for Claude 3.5 Sonnet
-**Size:** 1,267 lines
+### `llm-prompt-gpt5-reasoning_preprocessor.md`
+**Purpose:** Production prompt for GPT-5/o1-mini reasoning models with preprocessing
+**Size:** 657 lines
+**Features:**
+- Optimized for o1-mini reasoning capabilities
+- Works with JavaScript preprocessor (v0.8.6+)
+- Handles deterministic conversions: Font Awesome icons, drop shadows, borders, layouts
+- Focuses LLM on semantic understanding and edge cases
 **Use:** Default conversion prompt
-
-### `llm-prompt-gpt5.md`
-**Purpose:** Optimized prompt for GPT-5/o1-mini reasoning models
-**Size:** 643 lines (49% smaller)
-**Use:** Higher accuracy, slower, 7x cost
 
 ---
 
-## 📚 Reference Docs (2 files)
+## 📚 Reference Docs (3 files)
 
 ### `BETTERFORMS_SCHEMA_REFERENCE.md`
 **Purpose:** Complete BetterForms schema documentation
@@ -38,18 +38,13 @@ Clean, organized documentation for the Figma-to-BetterForms conversion system.
 - Code modification guide
 - Priority matrix
 
----
-
-## 🔬 Comparison & Testing (1 file)
-
-### `PROMPT_COMPARISON.md`
-**Purpose:** A/B testing guide for both prompts
+### `future-features.md`
+**Purpose:** Planned features and implementation notes
 **Contains:**
-- Metrics comparison
-- Key differences
-- Performance expectations
-- Testing recommendations
-- ROI analysis
+- Automatic Image URL Resolution from Figma API
+- Implementation steps
+- Benefits and trade-offs
+- Priority and effort estimates
 
 ---
 
@@ -62,6 +57,7 @@ Clean, organized documentation for the Figma-to-BetterForms conversion system.
 - v2: Icon & gradient fixes
 - v3: Font Awesome schema fix
 - Phase 1: Research implementation
+- v0.8.6: Font Awesome auto-conversion & drop shadow effects
 - Prompt cleanup
 - All decisions made
 
@@ -85,10 +81,7 @@ Clean, organized documentation for the Figma-to-BetterForms conversion system.
 → Read `BETTERFORMS_SCHEMA_REFERENCE.md` + `FIGMA_DATA_REFERENCE.md`
 
 **Modifying prompts?**
-→ Edit `llm-prompt-template.md` or `llm-prompt-gpt5.md`
-
-**Testing different models?**
-→ See `PROMPT_COMPARISON.md`
+→ Edit `llm-prompt-gpt5-reasoning_preprocessor.md`
 
 **Understanding what changed?**
 → Check `DEVELOPMENT_HISTORY.md`
@@ -96,28 +89,23 @@ Clean, organized documentation for the Figma-to-BetterForms conversion system.
 **Adding new features?**
 → See "Code Modification Guide" in `FIGMA_DATA_REFERENCE.md`
 
-**Considering JS preprocessing?**
+**Planning future features?**
+→ See `future-features.md`
+
+**Understanding the hybrid approach?**
 → See "Future Additions: Hybrid Approach" in `spec.md`
 
 ---
 
-## File Count: 7 (down from 14)
+## File Count: 7 core docs
 
-**Consolidated from:**
-- CURRENT_DATA_REFERENCE.md
-- additional-figma-data.md  
-- Figma_to_BetterForms_Research_Report.md
-- implementation-summary.md
-- prompt-improvements-v2.md
-- prompt-improvements-v3.md
-- prompt-improvements-phase1-research.md
-- prompt-redundancy-analysis.md
-- prompt-refinement-summary.md
+**Active Files:**
+- `llm-prompt-gpt5-reasoning_preprocessor.md` - Production prompt
+- `BETTERFORMS_SCHEMA_REFERENCE.md` - BF schema reference
+- `FIGMA_DATA_REFERENCE.md` - Figma extraction reference
+- `DEVELOPMENT_HISTORY.md` - Complete changelog
+- `future-features.md` - Planned features
+- `spec.md` - Original specification
+- `README.md` (this file) - Documentation overview
 
-**Into:**
-- FIGMA_DATA_REFERENCE.md (all Figma data)
-- DEVELOPMENT_HISTORY.md (all improvements)
-- PROMPT_COMPARISON.md (testing guide)
-
-**Result:** 50% fewer files, better organization, no lost information.
 

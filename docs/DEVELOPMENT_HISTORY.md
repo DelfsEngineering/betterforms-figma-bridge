@@ -435,5 +435,69 @@ Found significant redundancy in prompt template:
 
 ---
 
+## v0.8.6 (Build 106) - Font Awesome & Drop Shadow Auto-Conversion
+
+### Font Awesome Icon Auto-Conversion
+**Goal:** Automatically convert Font Awesome text nodes to proper icon tags in preprocessor
+
+**Implementation:**
+- Detects `fontName.family` containing "Font Awesome" (v6, v7, any version)
+- Extracts style from `fontName.style` (Solid, Regular, Light, Thin, Duotone, Brands)
+- Converts to proper HTML: `<i class="fa-solid fa-eye"></i>`
+- Handles all Font Awesome variations deterministically
+
+**Before:**
+```json
+{"html": "eye", "styleClasses": "text-[16px]"}
+```
+
+**After:**
+```json
+{"html": "<i class=\"fa-solid fa-eye\"></i>", "styleClasses": "text-[16px]"}
+```
+
+**Benefits:**
+- Eliminates LLM guesswork for icon detection
+- Consistent, deterministic conversion
+- Faster preprocessing, less token usage
+- Supports all Font Awesome versions and styles
+
+### DROP_SHADOW Effects Conversion
+**Goal:** Convert Figma drop shadows to Tailwind shadow classes in preprocessor
+
+**Implementation:**
+- Added `getEffectClasses(node, issues)` function
+- Filters visible `DROP_SHADOW` effects only
+- Matches common Tailwind presets (`shadow-sm`, `shadow`, `shadow-md`, `shadow-lg`, `shadow-xl`, `shadow-2xl`)
+- Falls back to arbitrary values for custom shadows: `shadow-[0px_1px_2px_0px_#000000]`
+- Handles 1-2 shadows deterministically
+- Flags 3+ shadows as complex for LLM handling
+- Applied to both `processContainerNode()` and `processShapeNode()`
+
+**Example:**
+```json
+// Figma: 2 drop shadows (0 1px 2px, 0 1px 3px)
+"styleClasses": "bg-[#f9fafb] shadow-[0px_1px_2px_0px_#000000,0px_1px_3px_0px_#000000]"
+```
+
+**Benefits:**
+- Proper shadow rendering in BetterForms
+- Reduces LLM workload for effects
+- Cleaner Tailwind output
+- Handles multiple shadows correctly
+
+### Code Cleanup
+- Removed all debug `console.log()` statements from production code
+- Kept `console.error()` and `console.warn()` for error handling
+- Cleaner, production-ready codebase
+
+**Impact:**
+- Faster conversions (less for LLM to process)
+- Lower token costs
+- More consistent output quality
+- Better handling of icon-heavy and shadowed designs
+
+---
+
 **This document tracks the complete evolution of the conversion system from initial implementation to current state.**
 
