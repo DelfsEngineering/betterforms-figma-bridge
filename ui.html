@@ -41,7 +41,9 @@
       padding: 2px 6px; 
       border-radius: 3px; 
       margin-left: 6px; 
-      margin-bottom: 2px;
+      vertical-align: middle;
+      position: relative;
+      top: -1px;
       line-height: 1;
     }
     .tabpane { display: none; }
@@ -245,8 +247,8 @@
     }
   </style>
   <script>
-    const VERSION = '0.9.1'
-    const BUILD = 111
+    const VERSION = '0.9.2'
+    const BUILD = 112
     let state = { 
       apiKey: '', 
       activeTab: 'preview', 
