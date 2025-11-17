@@ -1,6 +1,6 @@
 "use strict";
 // Show UI specified in manifest (ui.html)
-figma.showUI(__html__, { width: 420, height: 430 });
+figma.showUI(__html__, { width: 420, height: 520 });
 // ---------- Helpers for serialization (full-ish, safe, depth-limited) ----------
 function toHex(rgb) {
     function c(v) { return Math.round(v * 255).toString(16).padStart(2, '0'); }

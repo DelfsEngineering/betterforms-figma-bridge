@@ -7,11 +7,11 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; padding: 0; font: 12px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #111827; }
+    body { margin: 0; padding: 0; font: 12px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #111827; height: 100vh; display: flex; flex-direction: column; }
     .header { background: #ffffff; border-bottom: 1px solid #e5e7eb; padding: 8px 12px; display: flex; align-items: center; gap: 8px; }
     .header .spacer { flex: 1; }
     .header img { height: 16px; display: block; }
-    .section { padding: 0; border-bottom: none; }
+    .section { padding: 0; border-bottom: none; flex: 1; display: flex; flex-direction: column; min-height: 0; }
     .row { display: flex; gap: 8px; align-items: center; }
     .row.inline { gap: 8px; }
     .row > label { width: 84px; color: #374151; }
@@ -29,11 +29,12 @@
     .feedback.error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
 
     /* Tabs */
-    .tabs { display: flex; border-bottom: 1px solid #e5e7eb; margin: 0; padding: 4px 12px 0; gap: 4px; }
+    .tabs { display: flex; border-bottom: 1px solid #e5e7eb; margin: 0; padding: 4px 12px 0; gap: 4px; flex-shrink: 0; }
     .tab { padding: 8px 16px; cursor: pointer; border: none; background: transparent; font-weight: 500; color: #6b7280; font-size: 13px; border-radius: 6px 6px 0 0; margin-bottom: -1px; position: relative; transition: background-color 0.15s ease, color 0.15s ease; }
     .tab:hover { background: #f9fafb; color: #374151; }
     .tab.active { background: #f3f4f6; color: #111827; }
     .tab.active:hover { background: #f3f4f6; color: #111827; }
+    .tabpanes { flex: 1; display: flex; flex-direction: column; min-height: 0; }
     .tab-badge { 
       display: inline-block; 
       background: #dc2626; 
@@ -49,8 +50,8 @@
       line-height: 1;
     }
     .tabpane { display: none; }
-    .tabpane.active { display: flex; flex-direction: column; height: 405px; }
-    .tabpane-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .tabpane.active { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+    .tabpane-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
     .tabpane-footer { flex-shrink: 0; }
     .empty-state { display: flex; align-items: center; justify-content: center; min-height: 200px; color: #9ca3af; font-size: 13px; }
     #preview { border-radius: 4px; padding: 16px; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #F5F5F5; }
@@ -249,8 +250,8 @@
     }
   </style>
   <script>
-    const VERSION = '0.9.9'
-    const BUILD = 119
+    const VERSION = '0.9.10'
+    const BUILD = 120
     let state = { 
       apiKey: '', 
       activeTab: 'preview', 
