@@ -17,7 +17,6 @@
     .row > label { width: 84px; color: #374151; }
     input[type="text"], input[type="password"] { flex: 1; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 4px; }
     input[type="text"]::placeholder, input[type="password"]::placeholder { color: #9ca3af; }
-    #elementName { flex: none !important; }
     
     .actions { display: flex; gap: 8px; }
     button { appearance: none; border: 1px solid #d1d5db; background: #f9fafb; padding: 6px 10px; border-radius: 4px; cursor: pointer; }
@@ -50,7 +49,7 @@
       line-height: 1;
     }
     .tabpane { display: none; }
-    .tabpane.active { display: flex; flex-direction: column; height: 435px; }
+    .tabpane.active { display: flex; flex-direction: column; height: 405px; }
     .tabpane-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
     .tabpane-footer { flex-shrink: 0; }
     .empty-state { display: flex; align-items: center; justify-content: center; min-height: 200px; color: #9ca3af; font-size: 13px; }
@@ -250,8 +249,8 @@
     }
   </style>
   <script>
-    const VERSION = '0.9.6'
-    const BUILD = 116
+    const VERSION = '0.9.9'
+    const BUILD = 119
     let state = { 
       apiKey: '', 
       activeTab: 'preview', 
@@ -1640,6 +1639,32 @@
       return node
     }
 
+    // Sanitize smart quotes and other problematic Unicode characters
+    function sanitizeSmartQuotes(str) {
+      if (typeof str !== 'string') return str
+      return str
+        .replace(/[\u201C\u201D]/g, '"')  // Replace smart double quotes
+        .replace(/[\u2018\u2019]/g, "'")  // Replace smart single quotes
+        .replace(/[\u2013\u2014]/g, '-')  // Replace en-dash and em-dash
+        .replace(/[\u2026]/g, '...')      // Replace ellipsis
+    }
+
+    // Recursively sanitize all string properties in an object
+    function sanitizeNode(node) {
+      if (Array.isArray(node)) {
+        node.forEach(item => sanitizeNode(item))
+      } else if (node && typeof node === 'object') {
+        for (const key in node) {
+          if (typeof node[key] === 'string') {
+            node[key] = sanitizeSmartQuotes(node[key])
+          } else if (typeof node[key] === 'object') {
+            sanitizeNode(node[key])
+          }
+        }
+      }
+      return node
+    }
+
     async function sendToBetterForms() {
       if (!state.apiKey) {
         showFeedback('Please save an API key in the Account tab first.', 'error')
@@ -1658,6 +1683,8 @@
         const originalSize = JSON.stringify(state.selectionData).length
         const dataToSend = JSON.parse(JSON.stringify(state.selectionData))
         dataToSend.forEach(node => stripBase64Data(node))
+        // Sanitize smart quotes and problematic Unicode characters
+        dataToSend.forEach(node => sanitizeNode(node))
         const strippedSize = JSON.stringify(dataToSend).length
         
         // Determine preprocessing mode
@@ -2150,18 +2177,18 @@
         <div class="tabpane-content" style="padding: 12px;">
           <div style="width:100%; padding:0 0 8px 0; display:flex; gap:8px; align-items:center;">
             <label for="elementName" style="font-weight: 500; color: #374151; white-space: nowrap;">Element Name:</label>
-            <input id="elementName" type="text" style="flex:2; min-width: 200px;" placeholder="Element name"  oninput="updateElementName(this.value)" />
+            <input id="elementName" type="text" style="flex: 1;" placeholder="Element name"  oninput="updateElementName(this.value)" />
           </div>
           <div id="tokenWarning" style="display:none;"></div>
           <div id="preview" style="flex:1; display:flex; align-items:center; justify-content:center;">
             <div class="empty-state">Select a layer or object to preview</div>
           </div>
         </div>
-        <div class="tabpane-footer" style="position: sticky; bottom: 0; background: white; border-top: 1px solid #e5e7eb; padding: 8px 12px 12px;">
+        <div class="tabpane-footer" style="position: sticky; bottom: 0; background: white; border-top: 1px solid #e5e7eb; padding: 12px;">
           <div id="sendOptions" class="row inline" style="margin-bottom:8px; padding-bottom:6px; display:none;"></div>
-          <div style="display: flex; gap: 4px; align-items: stretch;">
+          <div style="display: flex; gap: 8px; align-items: stretch;">
             <button id="sendBtn" class="primary" style="flex: 1;" onclick="sendToBetterForms()">Send to BetterForms</button>
-            <button onclick="openExportModal()" title="Export settings" style="padding: 0; width: 40px; height: 40px; min-height: 40px; flex-shrink: 0; background: white; border: 1px solid #d1d5db; color: #111827; font-size: 16px; line-height: 1; display: flex; align-items: center; justify-content: center; border-radius: 4px; cursor: pointer;"><i class="fas fa-cog"></i></button>
+            <button onclick="openExportModal()" title="Export settings" style="padding: 0; width: 40px; height: 40px; min-height: 40px; flex-shrink: 0; background: white; border: 1px solid #d1d5db; color: #111827; font-size: 16px; line-height: 1; display: flex; align-items: center; justify-content: center; border-radius: 4px; cursor: pointer;"><i class="fas fa-sliders-h"></i></button>
           </div>
           <div id="sendFeedback" class="feedback" style="display:none;"></div>
         </div>

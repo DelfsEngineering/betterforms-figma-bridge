@@ -1,5 +1,5 @@
 // Show UI specified in manifest (ui.html)
-figma.showUI(__html__, { width: 420, height: 490 });
+figma.showUI(__html__, { width: 420, height: 430 });
 
 // ---------- Helpers for serialization (full-ish, safe, depth-limited) ----------
 function toHex(rgb: RGB): string {
