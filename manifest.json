@@ -4,19 +4,6 @@
   "api": "1.0.0",
   "main": "dist/code.js",
   "ui": "ui.html",
-  "menu": [
-    {
-      "name": "BetterForms Figma Bridge",
-      "command": "main",
-      "icon": "assets/icon.svg"
-    }
-  ],
   "editorType": ["figma"],
-  "documentAccess": "dynamic-page",
-  "networkAccess": {
-    "allowedDomains": [
-      "https://app.fmbetterforms.com",
-      "https://appdev.fmbetterforms.com"
-    ]
-  }
+  "icon": "assets/icon.svg"
 }
