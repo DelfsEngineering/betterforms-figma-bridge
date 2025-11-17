@@ -30,8 +30,19 @@
 
     /* Tabs */
     .tabs { display: flex; border-bottom: 1px solid #e5e7eb; margin: 0; padding: 4px 12px 0; gap: 4px; }
-    .tab { padding: 8px 16px; cursor: pointer; border: none; background: transparent; font-weight: 500; color: #6b7280; font-size: 13px; border-radius: 6px 6px 0 0; margin-bottom: -1px; }
+    .tab { padding: 8px 16px; cursor: pointer; border: none; background: transparent; font-weight: 500; color: #6b7280; font-size: 13px; border-radius: 6px 6px 0 0; margin-bottom: -1px; position: relative; }
     .tab.active { background: #f3f4f6; color: #111827; }
+    .tab-badge { 
+      display: inline-block; 
+      background: #dc2626; 
+      color: white; 
+      font-size: 9px; 
+      font-weight: 600; 
+      padding: 2px 6px; 
+      border-radius: 10px; 
+      margin-left: 6px; 
+      line-height: 1;
+    }
     .tabpane { display: none; }
     .tabpane.active { display: flex; flex-direction: column; height: 435px; }
     .tabpane-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
@@ -233,8 +244,8 @@
     }
   </style>
   <script>
-    const VERSION = '0.8.9'
-    const BUILD = 109
+    const VERSION = '0.9.0'
+    const BUILD = 110
     let state = { 
       apiKey: '', 
       activeTab: 'preview', 
@@ -244,6 +255,7 @@
       sendAs: 'element', 
       elementName: '',
       loadingPreview: false, // Track if we're currently loading a preview
+      devMode: false, // Dev mode toggle (appdev vs app endpoint)
       preprocessing: {
         enabled: true,
         mode: 'auto'
@@ -264,6 +276,12 @@
         if (inp) inp.value = state.apiKey
         renderHeader()
         renderAccountSection()
+        // Load dev mode setting
+        state.devMode = msg.devMode || false
+        const devToggle = document.getElementById('devModeToggle')
+        if (devToggle) devToggle.checked = state.devMode
+        updateDevModeBadge()
+        applyActiveTab() // Apply tab visibility based on dev mode
         // Load preprocessing settings
         loadPreprocessingSettings(msg.preprocessEnabled, msg.preprocessMode)
         // Load export settings
@@ -1707,7 +1725,10 @@
         
         let response
         try {
-          response = await fetch('https://appdev.fmbetterforms.com/api/v1/figma', {
+          const endpoint = state.devMode 
+            ? 'https://appdev.fmbetterforms.com/api/v1/figma'
+            : 'https://app.fmbetterforms.com/api/v1/figma'
+          response = await fetch(endpoint, {
             method: 'POST',
             headers: { 
               'Content-Type': 'application/json',
@@ -2075,12 +2096,36 @@
       tabs.forEach(t => {
         const isActive = t.dataset.tab === state.activeTab
         t.classList.toggle('active', isActive)
+        // Hide JSON tab when not in dev mode
+        if (t.dataset.tab === 'json' && !state.devMode) {
+          t.style.display = 'none'
+        } else if (t.dataset.tab === 'json') {
+          t.style.display = ''
+        }
       })
       const panes = document.querySelectorAll('.tabpane')
       panes.forEach(p => {
         const isActive = p.dataset.tab === state.activeTab
         p.classList.toggle('active', isActive)
       })
+      // If JSON tab was active but dev mode is off, switch to preview
+      if (state.activeTab === 'json' && !state.devMode) {
+        setActiveTab('preview')
+      }
+    }
+
+    function toggleDevMode(enabled) {
+      state.devMode = enabled
+      parent.postMessage({ pluginMessage: { type: 'save-dev-mode', devMode: enabled } }, '*')
+      updateDevModeBadge()
+      applyActiveTab()
+    }
+
+    function updateDevModeBadge() {
+      const badge = document.getElementById('devBadge')
+      if (badge) {
+        badge.style.display = state.devMode ? 'inline-block' : 'none'
+      }
     }
   </script>
 </head>
@@ -2090,7 +2135,9 @@
     <div class="tabs">
       <button class="tab active" data-tab="preview" onclick="setActiveTab('preview')">Preview</button>
       <button class="tab" data-tab="json" onclick="setActiveTab('json')">JSON</button>
-      <button class="tab" data-tab="account" style="margin-left:auto" onclick="setActiveTab('account')">Account</button>
+      <button class="tab" data-tab="account" style="margin-left:auto" onclick="setActiveTab('account')">
+        Account<span id="devBadge" class="tab-badge" style="display:none;">DEV</span>
+      </button>
     </div>
     <div class="tabpanes">
       <div class="tabpane active" data-tab="preview">
@@ -2151,6 +2198,19 @@
             </div>
             <div class="row" style="justify-content:flex-end;">
               <button id="logoutBtn" onclick="logout()">Disconnect</button>
+            </div>
+          </div>
+
+          <div style="margin-top:24px; padding-top:16px; border-top:1px solid #e5e7eb;">
+            <div class="modal-setting" style="border:none; padding:0;">
+              <div class="modal-setting-label">
+                <strong>Developer Mode</strong>
+                <span class="small">Use appdev.fmbetterforms.com endpoint for development only</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="devModeToggle" onchange="toggleDevMode(this.checked)">
+                <span class="toggle-slider"></span>
+              </label>
             </div>
           </div>
           

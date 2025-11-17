@@ -383,6 +383,11 @@ figma.ui.onmessage = async (msg) => {
         figma.notify('Preprocessing settings saved');
 		return;
 	}
+    if (msg && msg.type === 'save-dev-mode') {
+        await figma.clientStorage.setAsync('bf.devMode', msg.devMode);
+        figma.notify(msg.devMode ? 'Developer mode enabled' : 'Developer mode disabled');
+		return;
+	}
     if (msg && msg.type === 'save-export-settings') {
         await figma.clientStorage.setAsync('bf.export.stripAllSvg', msg.stripAllSvg);
         await figma.clientStorage.setAsync('bf.export.outerElementFullWidth', msg.outerElementFullWidth);
@@ -421,6 +426,7 @@ figma.ui.onmessage = async (msg) => {
         const outerElementFullWidth = await figma.clientStorage.getAsync('bf.export.outerElementFullWidth');
         const stripRedundantChildFills = await figma.clientStorage.getAsync('bf.export.stripRedundantChildFills');
         const applyOverflowHidden = await figma.clientStorage.getAsync('bf.export.applyOverflowHidden');
+        const devMode = await figma.clientStorage.getAsync('bf.devMode');
         figma.ui.postMessage({ 
             type: 'init', 
             apiKey: savedApiKey || '',
@@ -429,7 +435,8 @@ figma.ui.onmessage = async (msg) => {
             stripAllSvg: stripAllSvg === true,
             outerElementFullWidth: outerElementFullWidth !== false,
             stripRedundantChildFills: stripRedundantChildFills !== false,
-            applyOverflowHidden: applyOverflowHidden !== false
+            applyOverflowHidden: applyOverflowHidden !== false,
+            devMode: devMode === true
         });
         // Send loading message if there's a selection
         if (figma.currentPage.selection.length > 0) {
