@@ -249,8 +249,8 @@
     }
   </style>
   <script>
-    const VERSION = '0.9.4'
-    const BUILD = 114
+    const VERSION = '0.9.5'
+    const BUILD = 115
     let state = { 
       apiKey: '', 
       activeTab: 'preview', 
@@ -1639,32 +1639,6 @@
       return node
     }
 
-    // Sanitize smart quotes and other problematic Unicode characters
-    function sanitizeSmartQuotes(str) {
-      if (typeof str !== 'string') return str
-      return str
-        .replace(/[\u201C\u201D]/g, '"')  // Replace smart double quotes
-        .replace(/[\u2018\u2019]/g, "'")  // Replace smart single quotes
-        .replace(/[\u2013\u2014]/g, '-')  // Replace en-dash and em-dash
-        .replace(/[\u2026]/g, '...')      // Replace ellipsis
-    }
-
-    // Recursively sanitize all string properties in an object
-    function sanitizeNode(node) {
-      if (Array.isArray(node)) {
-        node.forEach(item => sanitizeNode(item))
-      } else if (node && typeof node === 'object') {
-        for (const key in node) {
-          if (typeof node[key] === 'string') {
-            node[key] = sanitizeSmartQuotes(node[key])
-          } else if (typeof node[key] === 'object') {
-            sanitizeNode(node[key])
-          }
-        }
-      }
-      return node
-    }
-
     async function sendToBetterForms() {
       if (!state.apiKey) {
         showFeedback('Please save an API key in the Account tab first.', 'error')
@@ -1683,8 +1657,6 @@
         const originalSize = JSON.stringify(state.selectionData).length
         const dataToSend = JSON.parse(JSON.stringify(state.selectionData))
         dataToSend.forEach(node => stripBase64Data(node))
-        // Sanitize smart quotes and problematic Unicode characters
-        dataToSend.forEach(node => sanitizeNode(node))
         const strippedSize = JSON.stringify(dataToSend).length
         
         // Determine preprocessing mode
