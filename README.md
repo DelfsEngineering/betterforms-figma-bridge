@@ -2,6 +2,8 @@
 
 A Figma plugin that converts Figma designs into BetterForms page schemas, enabling seamless translation of UI designs into functional forms.
 
+> ⚠️ Important: This plugin must be used with BF Editor Version 3.
+
 ## 🎯 What It Does
 
 This plugin bridges Figma designs with FileMaker BetterForms, enabling automated conversion of UI designs into functional forms.

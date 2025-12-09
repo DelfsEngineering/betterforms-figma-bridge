@@ -7,7 +7,7 @@ Clean, organized documentation for the Figma-to-BetterForms conversion system.
 ## 📌 Core Prompt (1 file)
 
 ### `llm-prompt-gpt5-reasoning_preprocessor.md`
-**Purpose:** Production prompt for GPT-5/o1-mini reasoning models with preprocessing
+**Purpose:** Production prompt for GPT-5 reasoning models with preprocessing
 **Size:** 657 lines
 **Features:**
 - Optimized for o1-mini reasoning capabilities
@@ -48,21 +48,6 @@ Clean, organized documentation for the Figma-to-BetterForms conversion system.
 
 ---
 
-## 📜 History (1 file)
-
-### `DEVELOPMENT_HISTORY.md`
-**Purpose:** Complete evolution record
-**Contains:**
-- Initial implementation
-- v2: Icon & gradient fixes
-- v3: Font Awesome schema fix
-- Phase 1: Research implementation
-- v0.8.6: Font Awesome auto-conversion & drop shadow effects
-- Prompt cleanup
-- All decisions made
-
----
-
 ## 📖 Spec (1 file)
 
 ### `spec.md`
@@ -83,11 +68,6 @@ Clean, organized documentation for the Figma-to-BetterForms conversion system.
 **Modifying prompts?**
 → Edit `llm-prompt-gpt5-reasoning_preprocessor.md`
 
-**Understanding what changed?**
-→ Check `DEVELOPMENT_HISTORY.md`
-
-**Adding new features?**
-→ See "Code Modification Guide" in `FIGMA_DATA_REFERENCE.md`
 
 **Planning future features?**
 → See `future-features.md`
@@ -97,13 +77,12 @@ Clean, organized documentation for the Figma-to-BetterForms conversion system.
 
 ---
 
-## File Count: 7 core docs
+## File Count: 6 core docs
 
 **Active Files:**
 - `llm-prompt-gpt5-reasoning_preprocessor.md` - Production prompt
 - `BETTERFORMS_SCHEMA_REFERENCE.md` - BF schema reference
 - `FIGMA_DATA_REFERENCE.md` - Figma extraction reference
-- `DEVELOPMENT_HISTORY.md` - Complete changelog
 - `future-features.md` - Planned features
 - `spec.md` - Original specification
 - `README.md` (this file) - Documentation overview
