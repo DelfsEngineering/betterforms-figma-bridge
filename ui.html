@@ -1760,8 +1760,8 @@
         let response
         try {
           const endpoint = state.devMode 
-            ? 'https://appdev.fmbetterforms.com/api/v1/figma'
-            : 'https://app.fmbetterforms.com/api/v1/figma'
+            ? 'https://appdev.klai.studio/api/v1/figma'
+            : 'https://app.klai.studio/api/v1/figma'
           response = await fetch(endpoint, {
             method: 'POST',
             headers: { 
@@ -2239,7 +2239,7 @@
             <div class="modal-setting" style="border:none; padding:0;">
               <div class="modal-setting-label">
                 <strong>Developer Mode</strong>
-                <span class="small">Use appdev.fmbetterforms.com endpoint for development only</span>
+                <span class="small">Use appdev.klai.studio endpoint for development only</span>
               </div>
               <label class="toggle-switch">
                 <input type="checkbox" id="devModeToggle" onchange="toggleDevMode(this.checked)">
